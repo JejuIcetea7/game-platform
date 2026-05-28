@@ -1,139 +1,39 @@
-import { useEffect, useRef } from 'react'
+import { createElement, useEffect, useRef } from 'react'
 import './App.css'
 
-declare global {
-  namespace React {
-    namespace JSX {
-      interface IntrinsicElements {
-        'image-slot': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-          shape?: string
-          placeholder?: string
-          fit?: string
-          filled?: string
-        }
-      }
-    }
-  }
-}
-
 export default function App() {
-  const stageRef = useRef<HTMLDivElement>(null)
+  const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const stage = stageRef.current!
+    const heroFrame = heroFrameRef.current!
     const canvas = canvasRef.current!
-    const MIN = 0.1, MAX = 5
-    let scale = 1, tx = 0, ty = 0
-
-    function apply() {
-      canvas.style.transform = `translate(${tx}px,${ty}px) scale(${scale})`
+    const scaleCanvas = () => {
+      canvas.style.transform = `scale(${heroFrame.clientWidth / 1920})`
     }
-    function reset() {
-      scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080) * 0.95
-      scale = Math.max(MIN, Math.min(MAX, scale))
-      tx = (window.innerWidth - 1920 * scale) / 2
-      ty = (window.innerHeight - 1080 * scale) / 2
-      apply()
-    }
-    reset()
-
-    const onWheel = (e: WheelEvent) => {
-      e.preventDefault()
-      const mx = e.clientX, my = e.clientY
-      const k = Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0015))
-      const next = Math.max(MIN, Math.min(MAX, scale * k))
-      const r = next / scale
-      tx = mx - (mx - tx) * r
-      ty = my - (my - ty) * r
-      scale = next
-      apply()
-    }
-    stage.addEventListener('wheel', onWheel, { passive: false })
-
-    let down = false, dragging = false, lx = 0, ly = 0, sx = 0, sy = 0
-
-    const onMouseDown = (e: MouseEvent) => {
-      if (e.button !== 0) return
-      down = true; lx = sx = e.clientX; ly = sy = e.clientY
-    }
-    const onMouseMove = (e: MouseEvent) => {
-      if (!down) return
-      if (!dragging) {
-        if (Math.abs(e.clientX - sx) + Math.abs(e.clientY - sy) < 4) return
-        dragging = true
-        stage.classList.add('grabbing')
-      }
-      tx += e.clientX - lx
-      ty += e.clientY - ly
-      lx = e.clientX; ly = e.clientY
-      apply()
-    }
-    const onMouseUp = () => {
-      if (dragging) {
-        const block = (ev: Event) => { ev.stopPropagation(); ev.preventDefault() }
-        window.addEventListener('click', block, { capture: true, once: true })
-      }
-      down = false; dragging = false
-      stage.classList.remove('grabbing')
-    }
-    stage.addEventListener('mousedown', onMouseDown)
-    window.addEventListener('mousemove', onMouseMove)
-    window.addEventListener('mouseup', onMouseUp)
-
-    let pinchDist = 0, pinchCx = 0, pinchCy = 0
-    const onTouchStart = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        const [a, b] = Array.from(e.touches)
-        pinchDist = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY)
-        pinchCx = (a.clientX + b.clientX) / 2
-        pinchCy = (a.clientY + b.clientY) / 2
-      } else if (e.touches.length === 1) {
-        down = true; lx = sx = e.touches[0].clientX; ly = sy = e.touches[0].clientY
-      }
-    }
-    const onTouchMove = (e: TouchEvent) => {
-      if (e.touches.length === 2) {
-        e.preventDefault()
-        const [a, b] = Array.from(e.touches)
-        const d = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY)
-        const cx = (a.clientX + b.clientX) / 2, cy = (a.clientY + b.clientY) / 2
-        const next = Math.max(MIN, Math.min(MAX, scale * (d / pinchDist)))
-        const r = next / scale
-        tx = cx - (cx - tx) * r + (cx - pinchCx)
-        ty = cy - (cy - ty) * r + (cy - pinchCy)
-        scale = next; pinchDist = d; pinchCx = cx; pinchCy = cy
-        apply()
-      } else if (e.touches.length === 1 && down) {
-        const t = e.touches[0]
-        tx += t.clientX - lx; ty += t.clientY - ly
-        lx = t.clientX; ly = t.clientY
-        apply()
-      }
-    }
-    const onTouchEnd = () => { down = false; pinchDist = 0 }
-    stage.addEventListener('touchstart', onTouchStart, { passive: true })
-    stage.addEventListener('touchmove', onTouchMove, { passive: false })
-    stage.addEventListener('touchend', onTouchEnd)
-
-    const onDblClick = (e: MouseEvent) => { e.preventDefault(); reset() }
-    stage.addEventListener('dblclick', onDblClick)
+    scaleCanvas()
+    const observer = new ResizeObserver(scaleCanvas)
+    observer.observe(heroFrame)
 
     const slot = document.getElementById('hero-character') as HTMLElement
     const ph = document.getElementById('char-ph') as HTMLElement
+    let placeholderObserver: MutationObserver | undefined
     if (slot && ph) {
       const syncPlaceholder = () => {
         const filled = slot.hasAttribute('filled') ||
+          slot.hasAttribute('src') ||
           !!slot.querySelector('img') ||
           getComputedStyle(slot).backgroundImage !== 'none'
         ph.style.display = filled ? 'none' : 'grid'
       }
       setTimeout(syncPlaceholder, 200)
-      new MutationObserver(syncPlaceholder).observe(slot, { attributes: true, childList: true, subtree: true })
+      placeholderObserver = new MutationObserver(syncPlaceholder)
+      placeholderObserver.observe(slot, { attributes: true, childList: true, subtree: true })
     }
 
+    const rowCleanups: Array<() => void> = []
     document.querySelectorAll<HTMLElement>('.row').forEach(r => {
-      r.addEventListener('click', () => {
+      const onClick = () => {
         const burst = document.createElement('div')
         burst.textContent = '✦'
         burst.style.cssText = `position:absolute;left:${r.offsetLeft + 40}px;top:${r.offsetTop - 10}px;
@@ -145,24 +45,29 @@ export default function App() {
           burst.style.opacity = '0'
         })
         setTimeout(() => burst.remove(), 650)
-      })
+      }
+      r.addEventListener('click', onClick)
+      rowCleanups.push(() => r.removeEventListener('click', onClick))
     })
 
     return () => {
-      stage.removeEventListener('wheel', onWheel)
-      stage.removeEventListener('mousedown', onMouseDown)
-      window.removeEventListener('mousemove', onMouseMove)
-      window.removeEventListener('mouseup', onMouseUp)
-      stage.removeEventListener('touchstart', onTouchStart)
-      stage.removeEventListener('touchmove', onTouchMove)
-      stage.removeEventListener('touchend', onTouchEnd)
-      stage.removeEventListener('dblclick', onDblClick)
+      observer.disconnect()
+      placeholderObserver?.disconnect()
+      rowCleanups.forEach(cleanup => cleanup())
     }
   }, [])
 
   return (
-    <div className="stage" ref={stageRef}>
-      <div className="canvas" ref={canvasRef} data-screen-label="우당탕탕 학교생활 메인">
+    <main className="site">
+      <section className="hero">
+        <div className="hero-copy">
+          <p className="eyebrow">방과 후 미니게임 교실</p>
+          <h1>우당탕탕 학교생활</h1>
+          <p>칠판 시간표에서 오늘의 게임을 고르고, 친구들과 짧고 빠르게 한 판씩 즐기는 학교 콘셉트 게임 플랫폼.</p>
+        </div>
+
+        <div className="hero-frame" ref={heroFrameRef}>
+          <div className="canvas" ref={canvasRef} data-screen-label="우당탕탕 학교생활 메인">
 
         <svg width="0" height="0" style={{ position: 'absolute' }}>
           <filter id="chalkRough">
@@ -254,12 +159,14 @@ export default function App() {
             <div className="stamp">검 인<span>校長</span></div>
 
             <div className="char-zone">
-              <image-slot
-                className="char"
-                id="hero-character"
-                shape="rect"
-                placeholder="여기에 SD 치비 캐릭터 드롭"
-              ></image-slot>
+              {createElement('image-slot', {
+                className: 'char',
+                id: 'hero-character',
+                shape: 'rect',
+                fit: 'contain',
+                placeholder: '여기에 SD 치비 캐릭터 드롭',
+                src: '/characters/character.png',
+              })}
               <div className="char-placeholder" id="char-ph">
                 <div className="char-card">
                   <div className="tag">MAIN CHARACTER</div>
@@ -323,7 +230,41 @@ export default function App() {
           </div>
         </div>
 
-      </div>
-    </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="site-section games-section">
+        <div className="section-heading">
+          <p className="eyebrow">오늘의 수업</p>
+          <h2>바로 들어갈 게임</h2>
+        </div>
+        <div className="game-cards">
+          <article className="game-card">
+            <span>1교시</span>
+            <h3>한붓그리기</h3>
+            <p>쉬워 보여도 마지막 선 하나가 승부를 가릅니다.</p>
+          </article>
+          <article className="game-card">
+            <span>2교시</span>
+            <h3>음악시간 러브비트</h3>
+            <p>분필 박자에 맞춰 리듬을 타는 교실형 미니게임.</p>
+          </article>
+          <article className="game-card">
+            <span>점심시간</span>
+            <h3>외발자전거</h3>
+            <p>복도 끝까지 넘어지지 않고 달리면 오늘의 주인공.</p>
+          </article>
+        </div>
+      </section>
+
+      <section className="site-section notice-section">
+        <div>
+          <p className="eyebrow">다음 업데이트</p>
+          <h2>새 시간표 준비 중</h2>
+        </div>
+        <p>캐릭터, 교실 소품, 게임 입장 버튼을 이 디자인 안에서 계속 확장할 수 있게 웹페이지 구조로 정리했습니다.</p>
+      </section>
+    </main>
   )
 }
