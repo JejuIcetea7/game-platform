@@ -61,9 +61,9 @@ export default function App() {
     <main className="site">
       <section className="hero">
         <div className="hero-copy">
-          <p className="eyebrow">방과 후 미니게임 교실</p>
-          <h1>우당탕탕 학교생활</h1>
-          <p>칠판 시간표에서 오늘의 게임을 고르고, 친구들과 짧고 빠르게 한 판씩 즐기는 학교 콘셉트 게임 플랫폼.</p>
+          <h1>
+            <img src="/images/main-logo.png" alt="우당탕탕 학교생활" className="hero-logo" />
+          </h1>
         </div>
 
         <div className="hero-frame" ref={heroFrameRef}>
@@ -106,14 +106,8 @@ export default function App() {
             <div className="doodle pink" style={{ right: '48px', top: '780px', fontSize: '38px', fontFamily: "'Nanum Pen Script',cursive", transform: 'rotate(-6deg)' }}>선생님 몰래!</div>
             <div className="doodle" style={{ right: '80px', top: '740px', fontSize: '34px', fontFamily: "'Dokdo',cursive", transform: 'rotate(8deg)' }}>↓</div>
             <div className="doodle yellow" style={{ left: '780px', top: '36px', fontSize: '40px', transform: 'rotate(-10deg)' }}>✦</div>
-            <div className="doodle" style={{ left: '830px', top: '120px', fontSize: '28px', fontFamily: "'Nanum Pen Script',cursive", transform: 'rotate(6deg)' }}>D-13 시험!</div>
 
             <div className="title-wrap">
-              <div className="title">
-                <span className="a">우</span><span className="b">당</span><span className="c">탕</span><span className="d">탕</span>
-                &nbsp;
-                <span className="e">학</span><span className="f">교</span><span className="g">생</span><span className="h">활</span>
-              </div>
               <div className="title-underline"></div>
               <div className="subtitle">오늘의 시간표</div>
             </div>
@@ -153,7 +147,6 @@ export default function App() {
               </div>
             </div>
 
-            <div className="doodle blue" style={{ left: '780px', bottom: '60px', fontSize: '36px', fontFamily: "'Nanum Pen Script',cursive", transform: 'rotate(-4deg)' }}>청소당번: 5조</div>
             <div className="doodle" style={{ left: '760px', bottom: '30px', fontSize: '28px', transform: 'rotate(-2deg)' }}>→ → →</div>
 
             <div className="stamp">검 인<span>校長</span></div>
