@@ -251,6 +251,49 @@ canvas { display:block; width:100%; height:100%; }
 }
 .m-desc b { color:#CC2222; }
 #start-panel.hidden { display:none; }
+
+/* ── 기록 폼 ── */
+#record-section { margin-top:14px; }
+#btn-record {
+  display:block; width:100%;
+  font-family:'Black Han Sans',sans-serif; font-size:16px;
+  letter-spacing:1px; padding:9px 28px;
+  background:#FAF3E3; color:#1A1008;
+  border:2.5px solid #1A1008; border-radius:2px; cursor:pointer;
+  box-shadow:3px 3px 0 rgba(0,0,0,.2);
+  margin-bottom:10px;
+  transition:transform .08s;
+}
+#btn-record:hover { transform:translate(-1px,-1px); }
+#record-form {
+  display:none; margin-top:6px;
+}
+#name-input {
+  width:100%; padding:8px 12px;
+  font-family:'Jua',sans-serif; font-size:16px;
+  border:2.5px solid #1A1008; border-radius:2px;
+  background:#FAF3E3; color:#1A1008;
+  box-shadow:2px 2px 0 rgba(0,0,0,.15);
+  outline:none; margin-bottom:8px;
+}
+#btn-record-confirm {
+  display:block; width:100%;
+  font-family:'Black Han Sans',sans-serif; font-size:16px;
+  letter-spacing:1px; padding:9px;
+  background:#1A1008; color:#FAF3E3;
+  border:2px solid #1A1008; border-radius:2px; cursor:pointer;
+  box-shadow:3px 3px 0 rgba(0,0,0,.25);
+  transition:transform .08s;
+}
+#btn-record-confirm:hover { transform:translate(-1px,-1px); }
+#record-done {
+  display:none;
+  font-family:'Black Han Sans',sans-serif; font-size:16px;
+  color:#1A1008; text-align:center; padding:10px;
+  border:2px solid #1A1008; border-radius:2px;
+  background:#FAF3E3; margin-top:6px;
+  letter-spacing:1px;
+}
 </style>
 </head>
 <body>
@@ -302,6 +345,14 @@ canvas { display:block; width:100%; height:100%; }
       <div id="go-dist">0m</div>
       <div id="go-rank">아직 초보 라이더...</div>
       <button class="ink-btn" id="btn-restart">▶ 다시 시작 [R]</button>
+      <div id="record-section">
+        <button id="btn-record">🏆 명예의 전당에 기록하기</button>
+        <div id="record-form">
+          <input id="name-input" type="text" maxlength="8" placeholder="닉네임 (최대 8자)" autocomplete="off">
+          <button id="btn-record-confirm">등록!</button>
+        </div>
+        <div id="record-done">✅ 명예의 전당에 기록됐어요!</div>
+      </div>
       <button class="ink-btn-sub" id="btn-main2">← 메인으로 돌아가기</button>
     </div>
   </div>
@@ -550,101 +601,179 @@ function drawCorridor(W, H) {
   ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
   ctx.beginPath(); ctx.moveTo(0, wallTY); ctx.lineTo(W, wallTY); ctx.stroke();
 
-  // ── 창문 ──────────────────────────────────────
+  // ── 교실이 보이는 창문 ────────────────────────
   {
-    const wW = 98, wH = WALLT_H * 0.66;
-    const wY = wallTY + WALLT_H * 0.18;
-    const period = 330;
+    const wW = 130, wH = WALLT_H * 0.72;
+    const wY = wallTY + WALLT_H * 0.14;
+    const period = 1100;
     const off = G.scroll % period;
     for (let x = -off - wW; x < W + wW; x += period) {
-      // 하늘
-      ctx.fillStyle = '#C8E8F4';
-      ctx.fillRect(x + 5, wY + 5, wW - 10, wH - 10);
-      // 하프톤 (창문 안 그림자)
-      drawHalftone(x + 5, wY + 5, (wW-10)*0.35, wH-10, 11, 'rgba(26,16,8,.08)');
-      // 창틀
+      // 창틀 목재
+      ctx.fillStyle = '#B89858';
+      ctx.fillRect(x - 5, wY - 5, wW + 10, wH + 10);
+      // 교실 내부 배경 (크림 벽)
+      ctx.fillStyle = '#EDE4CC';
+      ctx.fillRect(x, wY, wW, wH);
+      // 칠판 (교실 뒷벽에 보임)
+      const brdW = wW - 16, brdH = wH * 0.34;
+      ctx.fillStyle = '#3D7050';
+      ctx.fillRect(x + 8, wY + 6, brdW, brdH);
+      // 칠판 테두리
+      ctx.strokeStyle = '#2A5038'; ctx.lineWidth = 2;
+      ctx.strokeRect(x + 8, wY + 6, brdW, brdH);
+      // 칠판 글씨
+      ctx.fillStyle = 'rgba(255,255,255,.60)';
+      ctx.fillRect(x + 16, wY + 13, brdW * 0.38, 3);
+      ctx.fillRect(x + 16, wY + 19, brdW * 0.55, 3);
+      ctx.fillRect(x + 16, wY + 25, brdW * 0.28, 3);
+      // 책상들 (2열 × 4칸)
+      const deskW = (wW - 20) / 4 - 3;
+      const deskH = wH * 0.13;
+      const deskAreaY = wY + brdH + 10;
+      ctx.fillStyle = '#C8A858';
+      for (let row = 0; row < 2; row++) {
+        for (let col = 0; col < 4; col++) {
+          const dx = x + 8 + col * ((wW - 16) / 4);
+          const dy = deskAreaY + row * (deskH + 5);
+          ctx.fillRect(dx, dy, deskW, deskH);
+          ctx.strokeStyle = 'rgba(26,16,8,.25)'; ctx.lineWidth = 1;
+          ctx.strokeRect(dx, dy, deskW, deskH);
+        }
+      }
+      // 창틀 세로 분할선
+      ctx.strokeStyle = '#B89858'; ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.moveTo(x + wW/2, wY); ctx.lineTo(x + wW/2, wY + wH); ctx.stroke();
+      // 반사광
+      ctx.fillStyle = 'rgba(255,255,255,.22)';
+      ctx.beginPath();
+      ctx.moveTo(x + 4, wY + 4); ctx.lineTo(x + wW*0.36, wY + 4);
+      ctx.lineTo(x + 4, wY + wH*0.36); ctx.closePath(); ctx.fill();
+      // 바깥 창틀 테두리
       ctx.strokeStyle = INK; ctx.lineWidth = 3;
       ctx.strokeRect(x, wY, wW, wH);
-      // 십자 프레임
-      ctx.lineWidth = 2.5;
-      ctx.beginPath(); ctx.moveTo(x + wW/2, wY); ctx.lineTo(x + wW/2, wY + wH); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x, wY + wH/2); ctx.lineTo(x + wW, wY + wH/2); ctx.stroke();
-      // 빛 반사 (하얀 삼각형)
-      ctx.fillStyle = 'rgba(255,255,255,.55)';
-      ctx.beginPath();
-      ctx.moveTo(x + 8, wY + 8);
-      ctx.lineTo(x + wW*0.38, wY + 8);
-      ctx.lineTo(x + 8, wY + wH*0.38);
-      ctx.closePath(); ctx.fill();
     }
   }
 
   // ── 게시판 ────────────────────────────────────
   {
-    const bW = 110, bH = WALLT_H * 0.5;
-    const bY = wallTY + WALLT_H * 0.25;
-    const period = 330;
-    const off = (G.scroll + 165) % period;
+    const bW = 120, bH = WALLT_H * 0.52;
+    const bY = wallTY + WALLT_H * 0.22;
+    const period = 1100;
+    const off = (G.scroll + 367) % period;
     for (let x = -off - bW; x < W + bW; x += period) {
-      ctx.fillStyle = '#8B6914';
-      ctx.fillRect(x - 4, bY - 4, bW + 8, bH + 8);
-      ctx.fillStyle = '#D4C48A';
+      // 게시판 테두리 나무프레임
+      ctx.fillStyle = '#7A5510';
+      ctx.fillRect(x - 5, bY - 5, bW + 10, bH + 10);
+      // 코르크 면
+      ctx.fillStyle = '#D4B870';
       ctx.fillRect(x, bY, bW, bH);
-      drawHalftone(x + bW*0.55, bY, bW*0.45, bH, 9, 'rgba(26,16,8,.09)');
-      // 줄 (공지 느낌)
-      ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
-      for (let i = 0; i < 4; i++) {
-        const ly = bY + 10 + i * (bH * 0.18);
-        ctx.beginPath(); ctx.moveTo(x + 8, ly); ctx.lineTo(x + bW - 8, ly); ctx.stroke();
-      }
+      drawHalftone(x + bW*0.5, bY, bW*0.5, bH, 9, 'rgba(26,16,8,.08)');
+      // 부착 종이들 (A4 느낌)
+      const papers = [
+        { fx:0.05, fy:0.08, fw:0.42, fh:0.5,  col:'#FAF3E3' },
+        { fx:0.52, fy:0.08, fw:0.42, fh:0.5,  col:'#FAEAEA' },
+        { fx:0.05, fy:0.62, fw:0.88, fh:0.28, col:'#EAFAE8' },
+      ];
+      papers.forEach(p => {
+        ctx.fillStyle = p.col;
+        ctx.fillRect(x + bW*p.fx, bY + bH*p.fy, bW*p.fw, bH*p.fh);
+        // 줄글
+        ctx.strokeStyle = 'rgba(26,16,8,.18)'; ctx.lineWidth = 1;
+        for (let li = 0; li < 3; li++) {
+          const ly = bY + bH*p.fy + 6 + li*7;
+          if (ly > bY + bH*p.fy + bH*p.fh - 4) break;
+          ctx.beginPath();
+          ctx.moveTo(x + bW*p.fx + 4, ly);
+          ctx.lineTo(x + bW*p.fx + bW*p.fw - 4, ly);
+          ctx.stroke();
+        }
+        ctx.strokeStyle = 'rgba(26,16,8,.25)'; ctx.lineWidth = 1;
+        ctx.strokeRect(x + bW*p.fx, bY + bH*p.fy, bW*p.fw, bH*p.fh);
+      });
       // 압정
-      [0.2, 0.5, 0.8].forEach(fx => {
+      [[0.22, 0.08],[0.68, 0.08],[0.22, 0.6],[0.68, 0.6],[0.5, 0.08]].forEach(([fx,fy]) => {
         ctx.fillStyle = '#CC2222';
-        ctx.beginPath(); ctx.arc(x + bW * fx, bY - 1, 5, 0, Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(x + bW*fx, bY + bH*fy, 4.5, 0, Math.PI*2); ctx.fill();
         ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
       });
-      ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.strokeRect(x, bY, bW, bH);
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+      ctx.strokeRect(x, bY, bW, bH);
     }
   }
 
   // ── 하단 벽 (세이지그린) ──────────────────────
   ctx.fillStyle = '#72A882';
   ctx.fillRect(0, wallBY, W, WALLB_H);
-  // 하프톤 shadow (상단부)
   drawHalftone(0, wallBY, W, WALLB_H * 0.3, 10, 'rgba(26,16,8,.10)');
   ctx.strokeStyle = INK; ctx.lineWidth = 3;
   ctx.beginPath(); ctx.moveTo(0, wallBY); ctx.lineTo(W, wallBY); ctx.stroke();
 
-  // ── 사물함 ────────────────────────────────────
+  // ── 교실 입구 (문) ────────────────────────────
   {
-    const lkW = 56, lkH = WALLB_H * 0.88;
-    const lkY = wallBY + WALLB_H * 0.07;
-    const period = lkW + 4;
-    const off = G.scroll % period;
-    for (let x = -off - lkW; x < W + lkW; x += period) {
-      const idx = Math.floor((x + off) / period);
-      const col = (idx & 1) ? '#6678A8' : '#7888B8';
-      ctx.fillStyle = col;
-      ctx.fillRect(x, lkY, lkW, lkH);
-      // 하이라이트
-      ctx.fillStyle = 'rgba(255,255,255,.18)';
-      ctx.fillRect(x + 2, lkY + 2, lkW*0.35, lkH*0.9);
-      // 하프톤 shadow (오른쪽)
-      drawHalftone(x + lkW*0.6, lkY, lkW*0.4, lkH, 8, 'rgba(26,16,8,.12)');
-      // 환기구
-      ctx.strokeStyle = 'rgba(26,16,8,.3)'; ctx.lineWidth = 1;
-      for (let vi = 0; vi < 5; vi++) {
-        const vy = lkY + lkH*0.12 + vi * (lkH*0.1);
-        ctx.beginPath(); ctx.moveTo(x+8, vy); ctx.lineTo(x+lkW-8, vy); ctx.stroke();
+    const doorTopY = wallTY + WALLT_H * 0.06;
+    const doorH    = floorY - doorTopY - 3;
+    const doorW    = Math.round(doorH * 9 / 16);
+    const period   = 1100;
+    const off = (G.scroll + 734) % period;
+    for (let x = -off - doorW; x < W + doorW; x += period) {
+      // 문틀
+      ctx.fillStyle = '#8A6420';
+      ctx.fillRect(x - 6, doorTopY - 4, doorW + 12, doorH + 8);
+      // 문 목재 면
+      ctx.fillStyle = '#C09848';
+      ctx.fillRect(x, doorTopY, doorW, doorH);
+      // 목재 결 하이라이트
+      ctx.fillStyle = 'rgba(255,255,255,.10)';
+      ctx.fillRect(x + 3, doorTopY + 3, doorW*0.18, doorH - 6);
+      // 상단 유리창 (교실 내부 보임)
+      const gwW = doorW - 20, gwH = doorH * 0.20;
+      const gwX = x + 10, gwY = doorTopY + 12;
+      ctx.fillStyle = '#EDE4CC';
+      ctx.fillRect(gwX, gwY, gwW, gwH);
+      // 창 안 칠판
+      ctx.fillStyle = '#3D7050';
+      ctx.fillRect(gwX + 3, gwY + 3, gwW - 6, gwH * 0.48);
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.fillRect(gwX + 7, gwY + 6, gwW * 0.38, 2.5);
+      ctx.fillRect(gwX + 7, gwY + 11, gwW * 0.22, 2);
+      // 창 안 책상
+      ctx.fillStyle = '#C8A858';
+      for (let di = 0; di < 3; di++) {
+        ctx.fillRect(gwX + 3 + di * (gwW/3), gwY + gwH*0.58, gwW/3 - 3, gwH*0.28);
       }
-      // 손잡이
-      ctx.fillStyle = '#E8C040';
-      ctx.fillRect(x + lkW*0.78, lkY + lkH*0.46, lkW*0.1, lkH*0.1);
+      ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.strokeRect(gwX, gwY, gwW, gwH);
+      // 문 인셋 패널 2개 (세로)
+      const panelX = x + 8, panelW = doorW - 16;
+      const p1Y = gwY + gwH + 10, p1H = doorH * 0.28;
+      const p2Y = p1Y + p1H + 8,  p2H = doorH * 0.28;
+      ctx.strokeStyle = 'rgba(255,255,255,.25)'; ctx.lineWidth = 1.5;
+      ctx.strokeRect(panelX, p1Y, panelW, p1H);
+      ctx.strokeRect(panelX, p2Y, panelW, p2H);
+      ctx.strokeStyle = 'rgba(26,16,8,.20)'; ctx.lineWidth = 1;
+      ctx.strokeRect(panelX + 2, p1Y + 2, panelW - 4, p1H - 4);
+      ctx.strokeRect(panelX + 2, p2Y + 2, panelW - 4, p2H - 4);
+      // 반 번호 명판
+      const nbW = 54, nbH = 18;
+      const nbX = x + (doorW - nbW)/2, nbY = gwY + gwH + 4;
+      ctx.fillStyle = '#FAF3E3';
+      ctx.fillRect(nbX, nbY - nbH - 2, nbW, nbH);
       ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
-      ctx.strokeRect(x + lkW*0.78, lkY + lkH*0.46, lkW*0.1, lkH*0.1);
-      // 테두리
-      ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
-      ctx.strokeRect(x, lkY, lkW, lkH);
+      ctx.strokeRect(nbX, nbY - nbH - 2, nbW, nbH);
+      // 손잡이
+      ctx.fillStyle = '#D4A820';
+      ctx.beginPath(); ctx.arc(x + doorW - 14, doorTopY + doorH * 0.47, 5, 0, Math.PI*2); ctx.fill();
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.fillStyle = '#B08010';
+      ctx.fillRect(x + doorW - 16, doorTopY + doorH*0.47, 4, 16);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + doorW - 16, doorTopY + doorH*0.47, 4, 16);
+      // 문 테두리
+      ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      ctx.strokeRect(x, doorTopY, doorW, doorH);
+      // 문틀 테두리
+      ctx.strokeStyle = INK; ctx.lineWidth = 2;
+      ctx.strokeRect(x - 6, doorTopY - 4, doorW + 12, doorH + 8);
     }
   }
 
@@ -778,9 +907,10 @@ function drawOverlays(W, H, t) {
 function drawChar(W, H) {
   const GT = K.HUD_T, GH = H - GT - K.HUD_B;
   const floorY = GT + GH * (0.11 + 0.26 + 0.28);
-  const imgH   = Math.min(GH * 0.53, 270);
+  const imgH   = Math.min(GH * 0.72, 360);
   const imgW   = imgH * 0.75;
   const cx     = W / 2;
+  const baseY  = floorY + GH * 0.06;
 
   const img = IMGS[G.frame];
   if (!img.complete) return;
@@ -791,7 +921,7 @@ function drawChar(W, H) {
   }
 
   ctx.save();
-  ctx.translate(cx, floorY);
+  ctx.translate(cx, baseY);
   ctx.rotate(angle * Math.PI / 180);
   // 잉크 아웃라인 효과 (그림자로 시뮬레이션)
   ctx.shadowColor = 'rgba(26,16,8,.35)';
@@ -855,6 +985,36 @@ document.getElementById('btn-modal-close').addEventListener('click', () => {
 document.getElementById('btn-restart').addEventListener('click', resetGame);
 document.getElementById('btn-main').addEventListener('click', closeGame);
 document.getElementById('btn-main2').addEventListener('click', closeGame);
+
+// ── 명예의 전당 기록 ──────────────────────────────────────────────────────
+document.getElementById('btn-record').addEventListener('click', () => {
+  document.getElementById('record-form').style.display = 'block';
+  document.getElementById('name-input').focus();
+  document.getElementById('btn-record').style.display = 'none';
+});
+
+document.getElementById('btn-record-confirm').addEventListener('click', submitScore);
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitScore();
+});
+
+function submitScore() {
+  const nameEl = document.getElementById('name-input');
+  const name = nameEl.value.trim() || '익명';
+  const score = Math.floor(G.dist);
+  const now = new Date();
+  const date = `${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
+
+  const scores = JSON.parse(localStorage.getItem('lunchrun_scores') || '[]');
+  scores.push({ name, score, date });
+  scores.sort((a, b) => b.score - a.score);
+  localStorage.setItem('lunchrun_scores', JSON.stringify(scores.slice(0, 20)));
+
+  window.parent.postMessage({ type: 'lunchrunScoreAdded' }, '*');
+
+  document.getElementById('record-form').style.display = 'none';
+  document.getElementById('record-done').style.display = 'block';
+}
 
 function closeGame() {
   window.parent.postMessage({ type:'closeGame' }, '*');

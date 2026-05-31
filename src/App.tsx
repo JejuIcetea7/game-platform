@@ -30,24 +30,35 @@ const hallOfFameGames = [
     period: '점심시간',
     subject: '급식 RUN!',
     metric: '최장 거리',
-    records: [
-      { rank: 1, name: '하준', score: '420m', date: '05.28' },
-      { rank: 2, name: '지민', score: '397m', date: '05.30' },
-      { rank: 3, name: '서준', score: '365m', date: '05.26' },
-      { rank: 4, name: '아린', score: '344m', date: '05.29' },
-      { rank: 5, name: '이안', score: '318m', date: '05.27' },
-    ],
+    records: [],
   },
 ]
+
+function readLunchrunScores() {
+  try {
+    const raw = localStorage.getItem('lunchrun_scores')
+    const scores: Array<{ name: string; score: number; date: string }> = JSON.parse(raw || '[]')
+    return scores.slice(0, 5).map((s, i) => ({
+      rank: i + 1,
+      name: s.name,
+      score: `${s.score}m`,
+      date: s.date,
+    }))
+  } catch {
+    return []
+  }
+}
 
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [showGame, setShowGame] = useState(false)
+  const [lunchrunRecords, setLunchrunRecords] = useState(() => readLunchrunScores())
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.data?.type === 'closeGame') setShowGame(false)
+      if (e.data?.type === 'lunchrunScoreAdded') setLunchrunRecords(readLunchrunScores())
     }
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
@@ -316,7 +327,7 @@ export default function App() {
               </div>
 
               <ol className="record-list" aria-label={`${game.subject} 명예의 전당 TOP 5`}>
-                {game.records.map((record) => (
+                {(game.subject === '급식 RUN!' ? lunchrunRecords : game.records).map((record) => (
                   <li className={record.rank === 1 ? 'top-record' : undefined} key={`${game.subject}-${record.rank}`}>
                     <span className="rank">{record.rank}</span>
                     <strong>{record.name}</strong>
@@ -324,6 +335,11 @@ export default function App() {
                     <time dateTime={`2026-${record.date.replace('.', '-')}`}>{record.date}</time>
                   </li>
                 ))}
+                {game.subject === '급식 RUN!' && lunchrunRecords.length === 0 && (
+                  <li style={{ textAlign: 'center', color: '#aaa', padding: '12px 0', listStyle: 'none' }}>
+                    아직 기록이 없어요. 첫 번째 주자가 되어보세요!
+                  </li>
+                )}
               </ol>
 
               <div className="teacher-stamp">참 잘했어요</div>
