@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>급식 RUN!</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Black+Han+Sans&display=swap" rel="stylesheet">
+<style>
+* { margin:0; padding:0; box-sizing:border-box; }
+html,body { width:100%; height:100%; overflow:hidden; background:#FAF3E3; user-select:none; }
+#wrap { position:relative; width:100%; height:100%; }
+canvas { display:block; width:100%; height:100%; }
+
+/* ── 상단 HUD ── */
+#hud-top {
+  position:absolute; top:0; left:0; right:0; height:44px;
+  background:#FAF3E3;
+  border-bottom:3px solid #1A1008;
+  display:flex; align-items:center; justify-content:center;
+  gap:0; z-index:10;
+}
+#btn-main, #btn-howto {
+  position:absolute; top:50%; transform:translateY(-50%);
+  font-family:'Black Han Sans',sans-serif; font-size:13px;
+  padding:4px 13px; cursor:pointer;
+  background:#FAF3E3;
+  border:2.5px solid #1A1008; border-radius:2px;
+  color:#1A1008; letter-spacing:.5px;
+  box-shadow:2px 2px 0 #1A1008;
+  transition:transform .08s, box-shadow .08s;
+}
+#btn-main  { left:10px; }
+#btn-howto { right:10px; }
+#btn-main:hover, #btn-howto:hover {
+  transform:translateY(calc(-50% - 1px));
+  box-shadow:3px 3px 0 #1A1008;
+}
+#btn-main:active, #btn-howto:active {
+  transform:translateY(calc(-50% + 1px));
+  box-shadow:1px 1px 0 #1A1008;
+}
+.hud-center {
+  display:flex; align-items:baseline; gap:6px;
+}
+.hud-label {
+  font-family:'Jua',sans-serif; font-size:12px;
+  color:#888; letter-spacing:1px;
+}
+#dist-val {
+  font-family:'Black Han Sans',sans-serif; font-size:28px;
+  color:#1A1008; letter-spacing:1px;
+  text-shadow:2px 2px 0 rgba(0,0,0,.12);
+}
+
+/* ── 하단 게이지 HUD ── */
+#hud-bot {
+  position:absolute; bottom:0; left:0; right:0; height:50px;
+  background:#FAF3E3;
+  border-top:3px solid #1A1008;
+  display:flex; align-items:center; justify-content:center;
+  gap:10px; z-index:10; padding:0 14px;
+}
+.gauge-label {
+  font-family:'Black Han Sans',sans-serif; font-size:12px;
+  color:#1A1008; letter-spacing:.5px; white-space:nowrap;
+  flex-shrink:0;
+}
+#gauge-track {
+  flex:1; max-width:360px; height:22px;
+  background:#EDE6D4;
+  border:2.5px solid #1A1008; border-radius:2px;
+  position:relative;
+  box-shadow:2px 2px 0 #1A1008;
+}
+/* halftone-feel segments */
+#gauge-track::before {
+  content:''; position:absolute; inset:0; border-radius:1px;
+  background:repeating-linear-gradient(
+    90deg, transparent 0, transparent 14px, rgba(26,16,8,.06) 14px, rgba(26,16,8,.06) 15px
+  );
+}
+#gauge-danger-l {
+  position:absolute; left:0; top:0; bottom:0; width:15%;
+  background:repeating-linear-gradient(
+    45deg, rgba(200,40,40,.25) 0, rgba(200,40,40,.25) 3px, transparent 3px, transparent 7px
+  );
+  border-right:1.5px dashed rgba(200,40,40,.5);
+}
+#gauge-danger-r {
+  position:absolute; right:0; top:0; bottom:0; width:15%;
+  background:repeating-linear-gradient(
+    45deg, rgba(200,40,40,.25) 0, rgba(200,40,40,.25) 3px, transparent 3px, transparent 7px
+  );
+  border-left:1.5px dashed rgba(200,40,40,.5);
+}
+#gauge-center-mark {
+  position:absolute; top:-4px; bottom:-4px; left:50%;
+  width:3px; background:#1A1008;
+  transform:translateX(-50%); z-index:2;
+}
+#gauge-ptr {
+  position:absolute; top:-7px; bottom:-7px;
+  width:14px; background:#1A1008;
+  transform:translateX(-50%); z-index:3;
+  border-radius:1px;
+}
+#gauge-ptr::after {
+  content:''; position:absolute; top:2px; left:2px; right:2px; bottom:2px;
+  background:#FAF3E3; border-radius:1px;
+}
+#speed-val {
+  font-family:'Black Han Sans',sans-serif; font-size:13px;
+  color:#666; letter-spacing:.5px; white-space:nowrap; flex-shrink:0;
+  min-width:64px; text-align:right;
+}
+
+/* ── 스타트 패널 ── */
+#start-panel {
+  position:absolute; top:44px; left:0; right:0; bottom:50px;
+  display:flex; align-items:center; justify-content:center;
+  pointer-events:none; z-index:20;
+}
+#start-box {
+  pointer-events:all;
+  background:#FAF3E3;
+  border:3px solid #1A1008; border-radius:3px;
+  padding:28px 44px; text-align:center;
+  box-shadow:5px 5px 0 #1A1008;
+  position:relative;
+}
+/* 만화 말풍선 꼬리 */
+#start-box::before {
+  content:''; position:absolute; bottom:-18px; left:50%;
+  transform:translateX(-50%);
+  border-top:18px solid #1A1008; border-left:10px solid transparent; border-right:10px solid transparent;
+}
+#start-box::after {
+  content:''; position:absolute; bottom:-14px; left:50%;
+  transform:translateX(-50%);
+  border-top:14px solid #FAF3E3; border-left:8px solid transparent; border-right:8px solid transparent;
+}
+.start-sfx {
+  font-family:'Black Han Sans',sans-serif; font-size:36px;
+  color:#CC2222; letter-spacing:2px;
+  text-shadow:3px 3px 0 rgba(0,0,0,.18);
+  margin-bottom:8px;
+}
+.start-inst {
+  font-family:'Jua',sans-serif; font-size:17px;
+  color:#1A1008; line-height:1.7;
+}
+.start-key {
+  display:inline-block;
+  background:#1A1008; color:#FAF3E3;
+  font-family:'Black Han Sans',sans-serif;
+  font-size:14px; padding:1px 10px; border-radius:2px;
+  margin:0 3px;
+}
+.blink { animation:blink 1s step-end infinite; }
+@keyframes blink { 50%{opacity:0} }
+
+/* ── 게임오버 ── */
+#gameover {
+  position:absolute; top:44px; left:0; right:0; bottom:50px;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(250,243,227,.88);
+  z-index:20;
+}
+#gameover.hidden { display:none; }
+#go-box {
+  background:#FAF3E3;
+  border:4px solid #1A1008; border-radius:3px;
+  padding:32px 56px; text-align:center;
+  box-shadow:6px 6px 0 #1A1008;
+}
+#go-title {
+  font-family:'Black Han Sans',sans-serif; font-size:54px;
+  color:#CC2222; letter-spacing:3px;
+  text-shadow:4px 4px 0 #1A1008;
+  margin-bottom:6px;
+}
+.go-stamp {
+  display:inline-block;
+  border:3px solid #CC2222; color:#CC2222;
+  font-family:'Black Han Sans',sans-serif; font-size:13px;
+  padding:2px 12px; border-radius:2px; letter-spacing:2px;
+  transform:rotate(-4deg); opacity:.85;
+  margin-bottom:14px;
+}
+#go-dist {
+  font-family:'Black Han Sans',sans-serif; font-size:32px;
+  color:#1A1008; margin-bottom:6px;
+  text-shadow:2px 2px 0 rgba(0,0,0,.12);
+}
+#go-rank {
+  font-family:'Jua',sans-serif; font-size:16px;
+  color:#555; margin-bottom:24px;
+}
+.ink-btn {
+  display:block; width:100%;
+  font-family:'Black Han Sans',sans-serif; font-size:18px;
+  letter-spacing:1px; padding:10px 36px;
+  background:#1A1008; color:#FAF3E3;
+  border:2.5px solid #1A1008; border-radius:2px; cursor:pointer;
+  box-shadow:4px 4px 0 rgba(0,0,0,.25);
+  margin-bottom:10px;
+  transition:transform .08s, box-shadow .08s;
+}
+.ink-btn:hover { transform:translate(-2px,-2px); box-shadow:6px 6px 0 rgba(0,0,0,.25); }
+.ink-btn:active { transform:translate(2px,2px); box-shadow:2px 2px 0 rgba(0,0,0,.25); }
+.ink-btn-sub {
+  display:block; width:100%;
+  font-family:'Jua',sans-serif; font-size:14px;
+  padding:7px 28px;
+  background:#FAF3E3; color:#1A1008;
+  border:2.5px solid #1A1008; border-radius:2px; cursor:pointer;
+  box-shadow:3px 3px 0 rgba(0,0,0,.2);
+  transition:transform .08s;
+}
+.ink-btn-sub:hover { transform:translate(-1px,-1px); }
+
+/* ── 모달 ── */
+#modal {
+  position:absolute; inset:0; z-index:80;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(250,243,227,.82);
+}
+#modal.hidden { display:none; }
+#modal-box {
+  background:#FAF3E3;
+  border:3px solid #1A1008; border-radius:3px;
+  padding:32px 44px; max-width:460px; width:92%;
+  box-shadow:6px 6px 0 #1A1008;
+}
+#modal-box h3 {
+  font-family:'Black Han Sans',sans-serif; font-size:24px;
+  color:#1A1008; margin-bottom:20px; text-align:center;
+  border-bottom:2px solid #1A1008; padding-bottom:10px;
+}
+.m-row { display:flex; gap:14px; margin-bottom:14px; align-items:flex-start; }
+.m-k {
+  display:inline-block;
+  background:#1A1008; color:#FAF3E3;
+  font-family:'Black Han Sans',sans-serif; font-size:14px;
+  padding:2px 10px; border-radius:2px;
+  white-space:nowrap; flex-shrink:0;
+}
+.m-desc {
+  font-family:'Jua',sans-serif; font-size:14px;
+  color:#1A1008; line-height:1.7;
+}
+.m-desc b { color:#CC2222; }
+#start-panel.hidden { display:none; }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <div id="hud-top">
+    <button id="btn-main">← 메인</button>
+    <div class="hud-center">
+      <span class="hud-label">이동거리</span>
+      <span id="dist-val">0m</span>
+    </div>
+    <button id="btn-howto">조작법 ?</button>
+  </div>
+
+  <div id="hud-bot">
+    <span class="gauge-label">⚖ 균형</span>
+    <div id="gauge-track">
+      <div id="gauge-danger-l"></div>
+      <div id="gauge-danger-r"></div>
+      <div id="gauge-center-mark"></div>
+      <div id="gauge-ptr"></div>
+    </div>
+    <span id="speed-val">대기중</span>
+  </div>
+
+  <!-- 스타트 화면 -->
+  <div id="start-panel">
+    <div id="start-box">
+      <div class="start-sfx">딩동댕동~!</div>
+      <div class="start-inst">
+        외발자전거로 급식실까지 달려라!<br>
+        <span class="start-key">SPACE</span> 를 누르면 출발!
+      </div>
+      <div style="margin-top:14px;font-family:'Jua';font-size:13px;color:#888;">
+        이후 <span class="start-key" style="font-size:12px;">◀ ▶</span> 방향키로 균형을 잡아요
+      </div>
+      <div class="blink" style="margin-top:10px;font-family:'Black Han Sans';font-size:13px;color:#CC2222;letter-spacing:1px;">
+        ▼ PRESS SPACE ▼
+      </div>
+    </div>
+  </div>
+
+  <!-- 게임오버 -->
+  <div id="gameover" class="hidden">
+    <div id="go-box">
+      <div id="go-title">넘어졌다!</div>
+      <div class="go-stamp">GAME OVER</div><br>
+      <div id="go-dist">0m</div>
+      <div id="go-rank">아직 초보 라이더...</div>
+      <button class="ink-btn" id="btn-restart">▶ 다시 시작 [R]</button>
+      <button class="ink-btn-sub" id="btn-main2">← 메인으로 돌아가기</button>
+    </div>
+  </div>
+
+  <!-- 모달 -->
+  <div id="modal" class="hidden">
+    <div id="modal-box">
+      <h3>📋 조작 방법</h3>
+      <div class="m-row">
+        <span class="m-k">SPACE</span>
+        <span class="m-desc">게임 시작 — 오른쪽으로 기울며 출발!</span>
+      </div>
+      <div class="m-row">
+        <span class="m-k">◀ ▶</span>
+        <span class="m-desc"><b>톡·탁·톡·탁</b> 끊어서 눌러야 해요!<br>오래 누르면 그 방향으로 확 기울어져요.</span>
+      </div>
+      <div class="m-row">
+        <span class="m-k">⚠</span>
+        <span class="m-desc"><b>1초만 손 떼도 쓰러져요!</b><br>속도가 빨라질수록 더 자주 눌러야 해요.</span>
+      </div>
+      <div class="m-row">
+        <span class="m-k">R</span>
+        <span class="m-desc">게임 오버 후 다시 시작</span>
+      </div>
+      <button class="ink-btn" id="btn-modal-close" style="margin-top:6px">닫기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 이미지 로드 ──────────────────────────────────────────────────────────
+const IMGS = [
+  '/characters/unicycle_character_1.png',
+  '/characters/unicycle_character_2.png',
+  '/characters/unicycle_character_3.png',
+].map(s => { const i = new Image(); i.src = s; return i; });
+
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+// ── 물리 상수 ────────────────────────────────────────────────────────────
+const K = {
+  BASE_SPD  : 130,
+  MAX_SPD   : 650,
+  ACCEL     : 14,
+  INSTAB0   : 6.8,   // 매우 불안정 — ~1초 안에 쓰러짐
+  INSTAB_G  : 0.04,
+  DAMPING   : 1.2,
+  KEY_F     : 8.5,   // 강한 교정 힘
+  PERT_INT  : 0.55,
+  PERT_STR0 : 0.28,
+  PERT_G    : 0.012,
+  HUD_T     : 44,
+  HUD_B     : 50,
+};
+
+// ── 스파클 위치 (배경 장식용) ─────────────────────────────────────────────
+const SPARKLES = [
+  { fx:.08, fy:.35, phase:0.0,  size:14 },
+  { fx:.92, fy:.22, phase:1.3,  size:11 },
+  { fx:.88, fy:.65, phase:0.6,  size:16 },
+  { fx:.05, fy:.70, phase:2.1,  size:12 },
+  { fx:.50, fy:.15, phase:0.9,  size:10 },
+];
+
+// ── 스피드라인 사전 생성 ──────────────────────────────────────────────────
+const SPEED_LINES = Array.from({length:28}, () => ({
+  fy   : Math.random(),
+  flen : 0.06 + Math.random() * 0.12,
+  thick: Math.random() < 0.25 ? 2 : 1,
+  gap  : 0.3 + Math.random() * 0.7,
+}));
+
+// ── 상태 ─────────────────────────────────────────────────────────────────
+function mkState() {
+  return {
+    phase  : 'wait',
+    dist   : 0,
+    speed  : K.BASE_SPD,
+    bal    : 0,
+    balVel : 0,
+    elapsed: 0,
+    frame  : 0,
+    frameT : 0,
+    fallAng: 0,
+    scroll : 0,
+    pertT  : 0,
+    goFlash: 0,   // "GO!" 플래시 타이머
+    hintT  : 0,   // 시작 힌트 ("◀ ▶로 균형!") 타이머
+  };
+}
+let G = mkState();
+
+// ── 입력 ─────────────────────────────────────────────────────────────────
+const keys = { L:false, R:false };
+document.addEventListener('keydown', e => {
+  if (e.code === 'ArrowLeft')  { keys.L = true;  e.preventDefault(); }
+  if (e.code === 'ArrowRight') { keys.R = true;  e.preventDefault(); }
+  if (e.code === 'Space' && G.phase === 'wait') { startGame(); e.preventDefault(); }
+  if (e.code === 'KeyR' && G.phase === 'over')  { resetGame(); }
+});
+document.addEventListener('keyup', e => {
+  if (e.code === 'ArrowLeft')  keys.L = false;
+  if (e.code === 'ArrowRight') keys.R = false;
+});
+
+// ── 게임 흐름 ────────────────────────────────────────────────────────────
+const startPanel = document.getElementById('start-panel');
+const gameoverEl = document.getElementById('gameover');
+const goDist     = document.getElementById('go-dist');
+const goRank     = document.getElementById('go-rank');
+
+function startGame() {
+  G.phase   = 'playing';
+  G.bal     =  0.11;   // 오른쪽으로 살짝 기울어진 채로 출발
+  G.balVel  =  0.30;
+  G.goFlash =  0.6;
+  G.hintT   =  2.0;
+  startPanel.classList.add('hidden');
+}
+
+function resetGame() {
+  G = mkState();
+  gameoverEl.classList.add('hidden');
+  startPanel.classList.remove('hidden');
+  document.getElementById('dist-val').textContent = '0m';
+  document.getElementById('speed-val').textContent = '대기중';
+}
+
+function triggerFall() {
+  G.phase   = 'falling';
+  G.fallAng = 0;
+}
+
+function showGameOver() {
+  gameoverEl.classList.remove('hidden');
+  const d = Math.floor(G.dist);
+  goDist.textContent = `🏁 ${d}m 달렸어요!`;
+  goRank.textContent =
+    d < 20  ? '출발도 못 했잖아요...' :
+    d < 60  ? '초보 라이더 🚲' :
+    d < 120 ? '조금 더 연습해요! 👍' :
+    d < 200 ? '꽤 잘 달렸어요 ⭐' :
+    d < 350 ? '대단한 균형감각! 🌟' :
+              '전설의 급식런! 🏆';
+}
+
+// ── 업데이트 ─────────────────────────────────────────────────────────────
+function update(dt) {
+  dt = Math.min(dt, 0.05);
+
+  if (G.phase === 'falling') {
+    G.fallAng += dt * 200;
+    G.scroll  += G.speed * 0.15 * dt;
+    if (G.fallAng >= 85) { G.fallAng = 85; G.phase = 'over'; setTimeout(showGameOver, 350); }
+    return;
+  }
+  if (G.phase !== 'playing') return;
+
+  G.elapsed += dt;
+  G.goFlash  = Math.max(0, G.goFlash - dt);
+  G.hintT    = Math.max(0, G.hintT   - dt);
+
+  G.speed  = Math.min(K.BASE_SPD + K.ACCEL * G.elapsed, K.MAX_SPD);
+  G.dist  += G.speed * dt * 0.05;
+  G.scroll += G.speed * dt;
+
+  // 균형 물리
+  const instab  = K.INSTAB0 + K.INSTAB_G * G.elapsed;
+  const pertStr = K.PERT_STR0 + K.PERT_G * G.elapsed;
+  const sf      = 0.85 + G.elapsed / 50;
+
+  G.balVel += G.bal * instab * dt;
+  if (keys.L) G.balVel -= K.KEY_F * sf * dt;
+  if (keys.R) G.balVel += K.KEY_F * sf * dt;
+  G.balVel *= Math.exp(-K.DAMPING * dt);
+  G.balVel  = Math.max(-8, Math.min(8, G.balVel));
+  G.bal    += G.balVel * dt;
+
+  G.pertT += dt;
+  const pi = Math.max(0.18, K.PERT_INT - G.elapsed * 0.004);
+  if (G.pertT >= pi) {
+    G.pertT = 0;
+    G.balVel += (Math.random() - 0.5) * pertStr * 2;
+  }
+
+  if (Math.abs(G.bal) >= 1) { G.bal = Math.sign(G.bal); triggerFall(); }
+
+  const fd = Math.max(0.07, 0.19 * (K.BASE_SPD / G.speed));
+  G.frameT += dt;
+  if (G.frameT >= fd) { G.frameT -= fd; G.frame = (G.frame + 1) % 3; }
+}
+
+// ── 배경: 학교 복도 (만화 잉크 스타일) ───────────────────────────────────
+function drawCorridor(W, H) {
+  const GT = K.HUD_T, GB = K.HUD_B;
+  const GH = H - GT - GB;
+  const top = GT;
+
+  // 비율
+  const CEIL_H   = GH * 0.11;
+  const WALLT_H  = GH * 0.26;
+  const WALLB_H  = GH * 0.28;
+  const FLOOR_H  = GH * 0.35;
+
+  const ceilY  = top;
+  const wallTY = ceilY  + CEIL_H;
+  const wallBY = wallTY + WALLT_H;
+  const floorY = wallBY + WALLB_H;
+  const botY   = floorY + FLOOR_H;
+
+  const INK = '#1A1008';
+
+  // ── 천장 ──────────────────────────────────────
+  ctx.fillStyle = '#E8E0CC';
+  ctx.fillRect(0, ceilY, W, CEIL_H);
+  // 하프톤 점 (shadow 영역)
+  drawHalftone(0, ceilY + CEIL_H * 0.55, W, CEIL_H * 0.45, 10, 'rgba(26,16,8,.10)');
+  // 테두리
+  ctx.strokeStyle = INK; ctx.lineWidth = 3;
+  ctx.strokeRect(0, ceilY, W, CEIL_H);
+
+  // ── 형광등 ────────────────────────────────────
+  {
+    const lW = 110, lH = 10, lY = ceilY + CEIL_H * 0.42;
+    const period = 280;
+    const off = G.scroll % period;
+    for (let x = -off - lW; x < W + lW; x += period) {
+      ctx.fillStyle = '#FFFCE8';
+      ctx.fillRect(x, lY, lW, lH);
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+      ctx.strokeRect(x, lY, lW, lH);
+      // 전선
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(x + lW/2, ceilY); ctx.lineTo(x + lW/2, lY); ctx.stroke();
+    }
+  }
+
+  // ── 상단 벽 (크림색) ──────────────────────────
+  ctx.fillStyle = '#F5EAD0';
+  ctx.fillRect(0, wallTY, W, WALLT_H);
+  ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.moveTo(0, wallTY); ctx.lineTo(W, wallTY); ctx.stroke();
+
+  // ── 창문 ──────────────────────────────────────
+  {
+    const wW = 98, wH = WALLT_H * 0.66;
+    const wY = wallTY + WALLT_H * 0.18;
+    const period = 330;
+    const off = G.scroll % period;
+    for (let x = -off - wW; x < W + wW; x += period) {
+      // 하늘
+      ctx.fillStyle = '#C8E8F4';
+      ctx.fillRect(x + 5, wY + 5, wW - 10, wH - 10);
+      // 하프톤 (창문 안 그림자)
+      drawHalftone(x + 5, wY + 5, (wW-10)*0.35, wH-10, 11, 'rgba(26,16,8,.08)');
+      // 창틀
+      ctx.strokeStyle = INK; ctx.lineWidth = 3;
+      ctx.strokeRect(x, wY, wW, wH);
+      // 십자 프레임
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(x + wW/2, wY); ctx.lineTo(x + wW/2, wY + wH); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(x, wY + wH/2); ctx.lineTo(x + wW, wY + wH/2); ctx.stroke();
+      // 빛 반사 (하얀 삼각형)
+      ctx.fillStyle = 'rgba(255,255,255,.55)';
+      ctx.beginPath();
+      ctx.moveTo(x + 8, wY + 8);
+      ctx.lineTo(x + wW*0.38, wY + 8);
+      ctx.lineTo(x + 8, wY + wH*0.38);
+      ctx.closePath(); ctx.fill();
+    }
+  }
+
+  // ── 게시판 ────────────────────────────────────
+  {
+    const bW = 110, bH = WALLT_H * 0.5;
+    const bY = wallTY + WALLT_H * 0.25;
+    const period = 330;
+    const off = (G.scroll + 165) % period;
+    for (let x = -off - bW; x < W + bW; x += period) {
+      ctx.fillStyle = '#8B6914';
+      ctx.fillRect(x - 4, bY - 4, bW + 8, bH + 8);
+      ctx.fillStyle = '#D4C48A';
+      ctx.fillRect(x, bY, bW, bH);
+      drawHalftone(x + bW*0.55, bY, bW*0.45, bH, 9, 'rgba(26,16,8,.09)');
+      // 줄 (공지 느낌)
+      ctx.strokeStyle = '#888'; ctx.lineWidth = 1;
+      for (let i = 0; i < 4; i++) {
+        const ly = bY + 10 + i * (bH * 0.18);
+        ctx.beginPath(); ctx.moveTo(x + 8, ly); ctx.lineTo(x + bW - 8, ly); ctx.stroke();
+      }
+      // 압정
+      [0.2, 0.5, 0.8].forEach(fx => {
+        ctx.fillStyle = '#CC2222';
+        ctx.beginPath(); ctx.arc(x + bW * fx, bY - 1, 5, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
+      });
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.5; ctx.strokeRect(x, bY, bW, bH);
+    }
+  }
+
+  // ── 하단 벽 (세이지그린) ──────────────────────
+  ctx.fillStyle = '#72A882';
+  ctx.fillRect(0, wallBY, W, WALLB_H);
+  // 하프톤 shadow (상단부)
+  drawHalftone(0, wallBY, W, WALLB_H * 0.3, 10, 'rgba(26,16,8,.10)');
+  ctx.strokeStyle = INK; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, wallBY); ctx.lineTo(W, wallBY); ctx.stroke();
+
+  // ── 사물함 ────────────────────────────────────
+  {
+    const lkW = 56, lkH = WALLB_H * 0.88;
+    const lkY = wallBY + WALLB_H * 0.07;
+    const period = lkW + 4;
+    const off = G.scroll % period;
+    for (let x = -off - lkW; x < W + lkW; x += period) {
+      const idx = Math.floor((x + off) / period);
+      const col = (idx & 1) ? '#6678A8' : '#7888B8';
+      ctx.fillStyle = col;
+      ctx.fillRect(x, lkY, lkW, lkH);
+      // 하이라이트
+      ctx.fillStyle = 'rgba(255,255,255,.18)';
+      ctx.fillRect(x + 2, lkY + 2, lkW*0.35, lkH*0.9);
+      // 하프톤 shadow (오른쪽)
+      drawHalftone(x + lkW*0.6, lkY, lkW*0.4, lkH, 8, 'rgba(26,16,8,.12)');
+      // 환기구
+      ctx.strokeStyle = 'rgba(26,16,8,.3)'; ctx.lineWidth = 1;
+      for (let vi = 0; vi < 5; vi++) {
+        const vy = lkY + lkH*0.12 + vi * (lkH*0.1);
+        ctx.beginPath(); ctx.moveTo(x+8, vy); ctx.lineTo(x+lkW-8, vy); ctx.stroke();
+      }
+      // 손잡이
+      ctx.fillStyle = '#E8C040';
+      ctx.fillRect(x + lkW*0.78, lkY + lkH*0.46, lkW*0.1, lkH*0.1);
+      ctx.strokeStyle = INK; ctx.lineWidth = 1.5;
+      ctx.strokeRect(x + lkW*0.78, lkY + lkH*0.46, lkW*0.1, lkH*0.1);
+      // 테두리
+      ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
+      ctx.strokeRect(x, lkY, lkW, lkH);
+    }
+  }
+
+  // ── 바닥-벽 경계 ──────────────────────────────
+  ctx.strokeStyle = INK; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, floorY); ctx.lineTo(W, floorY); ctx.stroke();
+
+  // ── 바닥 ──────────────────────────────────────
+  ctx.fillStyle = '#C4B08A';
+  ctx.fillRect(0, floorY, W, FLOOR_H);
+  // 바닥 상단 하프톤 shadow
+  drawHalftone(0, floorY, W, FLOOR_H * 0.22, 9, 'rgba(26,16,8,.10)');
+  // 타일 줄
+  {
+    const tileW = 88;
+    const off = G.scroll % tileW;
+    ctx.strokeStyle = 'rgba(26,16,8,.22)'; ctx.lineWidth = 2;
+    for (let x = -off; x < W + tileW; x += tileW) {
+      ctx.beginPath(); ctx.moveTo(x, floorY); ctx.lineTo(x, botY); ctx.stroke();
+    }
+  }
+  // 타일 가로줄 (2개 고정)
+  ctx.strokeStyle = 'rgba(26,16,8,.15)'; ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(0, floorY + FLOOR_H*0.45); ctx.lineTo(W, floorY + FLOOR_H*0.45); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0, floorY + FLOOR_H*0.72); ctx.lineTo(W, floorY + FLOOR_H*0.72); ctx.stroke();
+  // 광택선
+  ctx.fillStyle = 'rgba(255,255,255,.14)';
+  ctx.fillRect(0, floorY, W, FLOOR_H * 0.06);
+
+  // ── 캐릭터 그림자 ─────────────────────────────
+  const shGr = ctx.createRadialGradient(W/2, floorY, 4, W/2, floorY, 65);
+  shGr.addColorStop(0, 'rgba(26,16,8,.30)');
+  shGr.addColorStop(1, 'rgba(26,16,8,0)');
+  ctx.fillStyle = shGr;
+  ctx.beginPath(); ctx.ellipse(W/2, floorY, 58, 10, 0, 0, Math.PI*2); ctx.fill();
+}
+
+// 하프톤 점 렌더링
+function drawHalftone(x, y, w, h, spacing, color) {
+  ctx.fillStyle = color;
+  const r = spacing * 0.28;
+  for (let dx = spacing*0.5; dx < w; dx += spacing) {
+    for (let dy = spacing*0.5; dy < h; dy += spacing) {
+      const row = Math.floor(dy / spacing);
+      const ox = (row % 2) * spacing * 0.5;
+      ctx.beginPath();
+      ctx.arc(x + dx + ox, y + dy, r, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+}
+
+// 스피드라인
+function drawSpeedLines(W, H) {
+  if (G.phase !== 'playing' && G.phase !== 'falling') return;
+  const frac = Math.max(0, (G.speed - 160) / (K.MAX_SPD - 160));
+  if (frac < 0.01) return;
+  const GT = K.HUD_T;
+  ctx.save();
+  ctx.globalAlpha = frac * 0.28;
+  ctx.strokeStyle = '#1A1008';
+  SPEED_LINES.forEach(sl => {
+    const y  = GT + sl.fy * (H - K.HUD_T - K.HUD_B);
+    const len = sl.flen * W;
+    const baseX = W * 0.52 - (G.scroll * sl.gap * 1.5) % (W * 0.55);
+    ctx.lineWidth = sl.thick;
+    ctx.beginPath();
+    ctx.moveTo(baseX, y);
+    ctx.lineTo(baseX - len, y);
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// 스파클 ✦
+function drawSparkles(W, H, t) {
+  const GT = K.HUD_T, areaH = H - K.HUD_T - K.HUD_B;
+  ctx.save();
+  SPARKLES.forEach(sp => {
+    const alpha = 0.45 + 0.45 * Math.sin((t * 2.8 + sp.phase) * Math.PI);
+    const cx = sp.fx * W, cy = GT + sp.fy * areaH;
+    const s  = sp.size;
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#CC2222';
+    ctx.font = `bold ${s}px serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('✦', cx, cy);
+  });
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+
+// "GO!" / 힌트 오버레이 (캔버스에 직접)
+function drawOverlays(W, H, t) {
+  const midX = W/2, midY = H/2;
+
+  // GO! 플래시
+  if (G.goFlash > 0) {
+    const a = G.goFlash / 0.6;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = `900 ${W*0.18}px 'Black Han Sans','Impact',sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.strokeStyle = '#1A1008'; ctx.lineWidth = 14;
+    ctx.strokeText('GO!', midX, midY);
+    ctx.fillStyle = '#CC2222';
+    ctx.fillText('GO!', midX, midY);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+
+  // 시작 힌트
+  if (G.hintT > 0 && G.hintT < 1.6) {
+    const a = Math.min(1, G.hintT / 0.4) * Math.min(1, (G.hintT) / 0.2);
+    ctx.save();
+    ctx.globalAlpha = a * 0.9;
+    ctx.font = `700 ${W*0.028}px 'Black Han Sans',sans-serif`;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const hy = K.HUD_T + (H - K.HUD_T - K.HUD_B) * 0.22;
+    ctx.fillStyle = '#FAF3E3';
+    ctx.strokeStyle = '#1A1008'; ctx.lineWidth = 5;
+    ctx.strokeText('◀ ▶ 방향키로 균형을 잡아라!', midX, hy);
+    ctx.fillText('◀ ▶ 방향키로 균형을 잡아라!', midX, hy);
+    ctx.globalAlpha = 1;
+    ctx.restore();
+  }
+}
+
+// ── 캐릭터 그리기 ────────────────────────────────────────────────────────
+function drawChar(W, H) {
+  const GT = K.HUD_T, GH = H - GT - K.HUD_B;
+  const floorY = GT + GH * (0.11 + 0.26 + 0.28);
+  const imgH   = Math.min(GH * 0.53, 270);
+  const imgW   = imgH * 0.75;
+  const cx     = W / 2;
+
+  const img = IMGS[G.frame];
+  if (!img.complete) return;
+
+  let angle = G.bal * 22;
+  if (G.phase === 'falling' || G.phase === 'over') {
+    angle = Math.sign(G.bal) * (22 + G.fallAng);
+  }
+
+  ctx.save();
+  ctx.translate(cx, floorY);
+  ctx.rotate(angle * Math.PI / 180);
+  // 잉크 아웃라인 효과 (그림자로 시뮬레이션)
+  ctx.shadowColor = 'rgba(26,16,8,.35)';
+  ctx.shadowBlur  = 0;
+  ctx.shadowOffsetX = 3;
+  ctx.shadowOffsetY = 3;
+  ctx.drawImage(img, -imgW/2, -imgH, imgW, imgH);
+  ctx.restore();
+}
+
+// ── UI DOM 갱신 ──────────────────────────────────────────────────────────
+function updateUI() {
+  document.getElementById('dist-val').textContent = `${Math.floor(G.dist)}m`;
+  if (G.phase === 'playing') {
+    document.getElementById('speed-val').textContent = `${(G.speed * 0.036).toFixed(1)} km/h`;
+  }
+  const pct = (G.bal + 1) / 2 * 100;
+  const ptr = document.getElementById('gauge-ptr');
+  ptr.style.left = `${Math.max(0, Math.min(100, pct))}%`;
+  // 위험 영역에서 포인터 색 변화
+  const abs = Math.abs(G.bal);
+  ptr.style.background = abs > 0.78 ? '#CC2222' : '#1A1008';
+}
+
+// ── 메인 루프 ────────────────────────────────────────────────────────────
+let prev = null, time = 0;
+function loop(ts) {
+  if (!prev) prev = ts;
+  const dt = (ts - prev) / 1000;
+  prev = ts;
+  time += dt;
+
+  update(dt);
+
+  canvas.width  = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const W = canvas.width, H = canvas.height;
+
+  // 배경 (종이 크림색)
+  ctx.fillStyle = '#FAF3E3';
+  ctx.fillRect(0, 0, W, H);
+
+  drawCorridor(W, H);
+  drawSpeedLines(W, H);
+  drawSparkles(W, H, time);
+  drawChar(W, H);
+  drawOverlays(W, H, time);
+  updateUI();
+
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ── 버튼 ─────────────────────────────────────────────────────────────────
+document.getElementById('btn-howto').addEventListener('click', () => {
+  document.getElementById('modal').classList.remove('hidden');
+});
+document.getElementById('btn-modal-close').addEventListener('click', () => {
+  document.getElementById('modal').classList.add('hidden');
+});
+document.getElementById('btn-restart').addEventListener('click', resetGame);
+document.getElementById('btn-main').addEventListener('click', closeGame);
+document.getElementById('btn-main2').addEventListener('click', closeGame);
+
+function closeGame() {
+  window.parent.postMessage({ type:'closeGame' }, '*');
+  if (window === window.parent) window.history.back();
+}
+</script>
+</body>
+</html>

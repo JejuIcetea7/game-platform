@@ -1,4 +1,4 @@
-import { createElement, useEffect, useRef } from 'react'
+import { createElement, useEffect, useRef, useState } from 'react'
 import './App.css'
 
 const hallOfFameGames = [
@@ -43,6 +43,15 @@ const hallOfFameGames = [
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
+  const [showGame, setShowGame] = useState(false)
+
+  useEffect(() => {
+    const onMsg = (e: MessageEvent) => {
+      if (e.data?.type === 'closeGame') setShowGame(false)
+    }
+    window.addEventListener('message', onMsg)
+    return () => window.removeEventListener('message', onMsg)
+  }, [])
 
   useEffect(() => {
     const heroFrame = heroFrameRef.current!
@@ -73,6 +82,7 @@ export default function App() {
     const rowCleanups: Array<() => void> = []
     document.querySelectorAll<HTMLElement>('.row').forEach(r => {
       const onClick = () => {
+        if (r.dataset.game === 'unicycle') { setShowGame(true); return; }
         const burst = document.createElement('div')
         burst.textContent = '✦'
         burst.style.cssText = `position:absolute;left:${r.offsetLeft + 40}px;top:${r.offsetTop - 10}px;
@@ -106,6 +116,17 @@ export default function App() {
         </div>
 
         <div className="hero-frame" ref={heroFrameRef}>
+          {showGame && (
+            <iframe
+              src="/games/lunch-run.html"
+              style={{
+                position: 'absolute', inset: 0, zIndex: 100,
+                width: '100%', height: '100%', border: 'none',
+              }}
+              title="급식 RUN!"
+              allowFullScreen
+            />
+          )}
           <div className="canvas" ref={canvasRef} data-screen-label="우당탕탕 학교생활 메인">
 
         <svg width="0" height="0" style={{ position: 'absolute' }}>
