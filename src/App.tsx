@@ -1,6 +1,45 @@
 import { createElement, useEffect, useRef } from 'react'
 import './App.css'
 
+const hallOfFameGames = [
+  {
+    period: '1교시',
+    subject: '칠판 낙서 왕',
+    metric: '완료 시간',
+    records: [
+      { rank: 1, name: '지우', score: '18.42초', date: '05.29' },
+      { rank: 2, name: '도윤', score: '19.08초', date: '05.27' },
+      { rank: 3, name: '서아', score: '20.11초', date: '05.30' },
+      { rank: 4, name: '민준', score: '21.36초', date: '05.28' },
+      { rank: 5, name: '하린', score: '22.04초', date: '05.26' },
+    ],
+  },
+  {
+    period: '2교시',
+    subject: '선생님 몰래 춤추기',
+    metric: '최고 점수',
+    records: [
+      { rank: 1, name: '민서', score: '98,400점', date: '05.30' },
+      { rank: 2, name: '하준', score: '96,850점', date: '05.29' },
+      { rank: 3, name: '유나', score: '95,200점', date: '05.28' },
+      { rank: 4, name: '시우', score: '93,900점', date: '05.25' },
+      { rank: 5, name: '라온', score: '92,700점', date: '05.27' },
+    ],
+  },
+  {
+    period: '점심시간',
+    subject: '급식 RUN!',
+    metric: '최장 거리',
+    records: [
+      { rank: 1, name: '하준', score: '420m', date: '05.28' },
+      { rank: 2, name: '지민', score: '397m', date: '05.30' },
+      { rank: 3, name: '서준', score: '365m', date: '05.26' },
+      { rank: 4, name: '아린', score: '344m', date: '05.29' },
+      { rank: 5, name: '이안', score: '318m', date: '05.27' },
+    ],
+  },
+]
+
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
@@ -123,8 +162,8 @@ export default function App() {
                 <div className="num">1교시</div>
                 <div className="dash">—</div>
                 <div>
-                  <span className="name">한붓그리기</span>
-                  <span className="note">(쉬워 보임)</span>
+                  <span className="name">칠판 낙서 왕</span>
+                  <span className="note">(분필 금지)</span>
                 </div>
               </div>
               <div className="row" data-game="lovebeat">
@@ -132,8 +171,8 @@ export default function App() {
                 <div className="num">2교시</div>
                 <div className="dash">—</div>
                 <div>
-                  <span className="name">음악시간</span>
-                  <span className="note">러브비트 ♪♪</span>
+                  <span className="name">선생님 몰래</span>
+                  <span className="note">춤추기 ♪♪</span>
                 </div>
               </div>
               <div className="row" data-game="unicycle">
@@ -141,8 +180,8 @@ export default function App() {
                 <div className="num">점심시간</div>
                 <div className="dash">—</div>
                 <div>
-                  <span className="name">외발자전거</span>
-                  <span className="note">우당탕!</span>
+                  <span className="name">급식 RUN!</span>
+                  <span className="note">먼저 도착!</span>
                 </div>
               </div>
             </div>
@@ -165,6 +204,10 @@ export default function App() {
                   <div className="tag">MAIN CHARACTER</div>
                   <div className="who">우당탕<br />주인공</div>
                 </div>
+              </div>
+              <div className="char-profile">
+                <strong>아라</strong>
+                <span>밝고 명량한 트러블 메이커</span>
               </div>
               <div className="char-shadow"></div>
             </div>
@@ -227,36 +270,45 @@ export default function App() {
         </div>
       </section>
 
-      <section className="site-section games-section">
+      <section className="site-section hall-section">
         <div className="section-heading">
-          <p className="eyebrow">오늘의 수업</p>
-          <h2>바로 들어갈 게임</h2>
+          <div>
+            <h2>게임별 명예의 전당</h2>
+          </div>
         </div>
-        <div className="game-cards">
-          <article className="game-card">
-            <span>1교시</span>
-            <h3>한붓그리기</h3>
-            <p>쉬워 보여도 마지막 선 하나가 승부를 가릅니다.</p>
-          </article>
-          <article className="game-card">
-            <span>2교시</span>
-            <h3>음악시간 러브비트</h3>
-            <p>분필 박자에 맞춰 리듬을 타는 교실형 미니게임.</p>
-          </article>
-          <article className="game-card">
-            <span>점심시간</span>
-            <h3>외발자전거</h3>
-            <p>복도 끝까지 넘어지지 않고 달리면 오늘의 주인공.</p>
-          </article>
-        </div>
-      </section>
+        <div className="report-cards">
+          {hallOfFameGames.map((game) => (
+            <article className="report-card" key={game.subject}>
+              <header className="report-card-head">
+                <span className="period-badge">{game.period}</span>
+                <div>
+                  <p>성적 우수자</p>
+                  <h3>{game.subject}</h3>
+                </div>
+              </header>
 
-      <section className="site-section notice-section">
-        <div>
-          <p className="eyebrow">다음 업데이트</p>
-          <h2>새 시간표 준비 중</h2>
+              <div className="record-labels">
+                <span>순위</span>
+                <span>이름</span>
+                <span>{game.metric}</span>
+                <span>날짜</span>
+              </div>
+
+              <ol className="record-list" aria-label={`${game.subject} 명예의 전당 TOP 5`}>
+                {game.records.map((record) => (
+                  <li className={record.rank === 1 ? 'top-record' : undefined} key={`${game.subject}-${record.rank}`}>
+                    <span className="rank">{record.rank}</span>
+                    <strong>{record.name}</strong>
+                    <span>{record.score}</span>
+                    <time dateTime={`2026-${record.date.replace('.', '-')}`}>{record.date}</time>
+                  </li>
+                ))}
+              </ol>
+
+              <div className="teacher-stamp">참 잘했어요</div>
+            </article>
+          ))}
         </div>
-        <p>캐릭터, 교실 소품, 게임 입장 버튼을 이 디자인 안에서 계속 확장할 수 있게 웹페이지 구조로 정리했습니다.</p>
       </section>
     </main>
   )
