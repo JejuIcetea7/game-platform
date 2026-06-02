@@ -951,14 +951,7 @@ function startGame() {
 }
 function saveScore() {
   const name=document.getElementById('name-input').value.trim()||'익명';
-  const d=new Date();
-  const date=`${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
-  try{
-    const sc=JSON.parse(localStorage.getItem('dance_scores')||'[]');
-    sc.push({name,score:G.score,date}); sc.sort((a,b)=>b.score-a.score);
-    localStorage.setItem('dance_scores',JSON.stringify(sc.slice(0,10)));
-    window.parent.postMessage({type:'danceScoreAdded'},'*');
-  }catch(e){}
+  window.parent.postMessage({type:'submitScore',game:'dance-teacher',name,score:G.score},'*');
   document.getElementById('name-wrap').classList.remove('show');
   document.getElementById('btn-submit').style.display='none';
   document.getElementById('go-score').textContent+='  ✅ 기록 저장!';

@@ -1026,15 +1026,7 @@ function submitScore() {
   const nameEl = document.getElementById('name-input');
   const name = nameEl.value.trim() || '익명';
   const score = Math.floor(G.dist);
-  const now = new Date();
-  const date = `${String(now.getMonth()+1).padStart(2,'0')}.${String(now.getDate()).padStart(2,'0')}`;
-
-  const scores = JSON.parse(localStorage.getItem('lunchrun_scores') || '[]');
-  scores.push({ name, score, date });
-  scores.sort((a, b) => b.score - a.score);
-  localStorage.setItem('lunchrun_scores', JSON.stringify(scores.slice(0, 20)));
-
-  window.parent.postMessage({ type: 'lunchrunScoreAdded' }, '*');
+  window.parent.postMessage({ type: 'submitScore', game: 'lunch-run', name, score }, '*');
 
   document.getElementById('record-form').style.display = 'none';
   document.getElementById('record-done').style.display = 'block';

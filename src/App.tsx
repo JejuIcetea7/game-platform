@@ -1,30 +1,20 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
+import { fetchAllTopScores, submitScore, type GameKey, type ScoreRecord } from './lib/scores'
+import { isSupabaseConfigured, supabase } from './lib/supabase'
 
 const hallOfFameGames = [
   {
     period: '1교시',
     subject: '칠판 낙서 왕',
     metric: '완료 시간',
-    records: [
-      { rank: 1, name: '지우', score: '18.42초', date: '05.29' },
-      { rank: 2, name: '도윤', score: '19.08초', date: '05.27' },
-      { rank: 3, name: '서아', score: '20.11초', date: '05.30' },
-      { rank: 4, name: '민준', score: '21.36초', date: '05.28' },
-      { rank: 5, name: '하린', score: '22.04초', date: '05.26' },
-    ],
+    records: [],
   },
   {
     period: '2교시',
     subject: '선생님 몰래 춤추기',
     metric: '최고 점수',
-    records: [
-      { rank: 1, name: '민서', score: '98,400점', date: '05.30' },
-      { rank: 2, name: '하준', score: '96,850점', date: '05.29' },
-      { rank: 3, name: '유나', score: '95,200점', date: '05.28' },
-      { rank: 4, name: '시우', score: '93,900점', date: '05.25' },
-      { rank: 5, name: '라온', score: '92,700점', date: '05.27' },
-    ],
+    records: [],
   },
   {
     period: '점심시간',
@@ -34,6 +24,12 @@ const hallOfFameGames = [
   },
 ]
 
+const emptyScoreRecords: Record<GameKey, ScoreRecord[]> = {
+  'one-line': [],
+  'dance-teacher': [],
+  'lunch-run': [],
+}
+
 const CHAR_FRAMES = [
   { src: '/characters/main_1.png', duration: 2000 },
   { src: '/characters/main_2.png', duration: 700 },
@@ -41,43 +37,17 @@ const CHAR_FRAMES = [
   { src: '/characters/main_4.png', duration: 600 },
 ]
 
-function readLunchrunScores() {
-  try {
-    const raw = localStorage.getItem('lunchrun_scores')
-    const scores: Array<{ name: string; score: number; date: string }> = JSON.parse(raw || '[]')
-    return scores.slice(0, 5).map((s, i) => ({
-      rank: i + 1,
-      name: s.name,
-      score: `${s.score}m`,
-      date: s.date,
-    }))
-  } catch {
-    return []
-  }
-}
-
-function readDanceScores() {
-  try {
-    const raw = localStorage.getItem('dance_scores')
-    const scores: Array<{ name: string; score: number; date: string }> = JSON.parse(raw || '[]')
-    return scores.slice(0, 5).map((s, i) => ({
-      rank: i + 1,
-      name: s.name,
-      score: `${s.score.toLocaleString()}점`,
-      date: s.date,
-    }))
-  } catch {
-    return []
-  }
-}
-
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [showGame, setShowGame] = useState<null | 'oneLine' | 'lunch' | 'dance'>(null)
-  const [lunchrunRecords, setLunchrunRecords] = useState(() => readLunchrunScores())
-  const [danceRecords, setDanceRecords] = useState(() => readDanceScores())
+  const [scoreRecords, setScoreRecords] = useState(emptyScoreRecords)
   const [charFrame, setCharFrame] = useState(0)
+
+  const refreshScores = useCallback(async () => {
+    if (!isSupabaseConfigured) return
+    setScoreRecords(await fetchAllTopScores())
+  }, [])
 
   useEffect(() => {
     const t = setTimeout(() => setCharFrame(f => (f + 1) % CHAR_FRAMES.length), CHAR_FRAMES[charFrame].duration)
@@ -85,14 +55,39 @@ export default function App() {
   }, [charFrame])
 
   useEffect(() => {
+    const loadTimer = window.setTimeout(() => {
+      void refreshScores()
+    }, 0)
+
+    const channel = supabase
+      ?.channel('game-scores-realtime')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'game_scores' },
+        () => {
+          void refreshScores()
+        },
+      )
+      .subscribe()
+
     const onMsg = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return
       if (e.data?.type === 'closeGame') setShowGame(null)
-      if (e.data?.type === 'lunchrunScoreAdded') setLunchrunRecords(readLunchrunScores())
-      if (e.data?.type === 'danceScoreAdded') setDanceRecords(readDanceScores())
+      if (e.data?.type === 'submitScore') {
+        const { game, name, score } = e.data as { game?: GameKey; name?: string; score?: number }
+        if (!game || typeof name !== 'string' || typeof score !== 'number') return
+        void submitScore(game, name, score)
+          .then(refreshScores)
+          .catch((error) => console.error('Failed to submit score', error))
+      }
     }
     window.addEventListener('message', onMsg)
-    return () => window.removeEventListener('message', onMsg)
-  }, [])
+    return () => {
+      window.clearTimeout(loadTimer)
+      window.removeEventListener('message', onMsg)
+      if (channel) void supabase?.removeChannel(channel)
+    }
+  }, [refreshScores])
 
   useEffect(() => {
     const heroFrame = heroFrameRef.current!
@@ -356,10 +351,10 @@ export default function App() {
 
               <ol className="record-list" aria-label={`${game.subject} 명예의 전당 TOP 5`}>
                 {(game.subject === '급식 RUN!'
-                  ? lunchrunRecords
+                  ? scoreRecords['lunch-run']
                   : game.subject === '선생님 몰래 춤추기'
-                    ? danceRecords
-                    : game.records
+                    ? scoreRecords['dance-teacher']
+                    : scoreRecords['one-line']
                 ).map((record) => (
                   <li className={record.rank === 1 ? 'top-record' : undefined} key={`${game.subject}-${record.rank}`}>
                     <span className="rank">{record.rank}</span>
@@ -368,14 +363,22 @@ export default function App() {
                     <time dateTime={`2026-${record.date.replace('.', '-')}`}>{record.date}</time>
                   </li>
                 ))}
-                {game.subject === '급식 RUN!' && lunchrunRecords.length === 0 && (
-                  <li style={{ textAlign: 'center', color: '#aaa', padding: '12px 0', listStyle: 'none' }}>
-                    아직 기록이 없어요. 첫 번째 주자가 되어보세요!
+                {game.subject === '급식 RUN!' && scoreRecords['lunch-run'].length === 0 && (
+                  <li className="empty-record">
+                    <strong>아직 기록이 없어요.</strong>
+                    <span>첫 번째 주자가 되어보세요!</span>
                   </li>
                 )}
-                {game.subject === '선생님 몰래 춤추기' && danceRecords.length === 0 && (
-                  <li style={{ textAlign: 'center', color: '#aaa', padding: '12px 0', listStyle: 'none' }}>
-                    아직 기록이 없어요. 첫 번째 댄서가 되어보세요!
+                {game.subject === '선생님 몰래 춤추기' && scoreRecords['dance-teacher'].length === 0 && (
+                  <li className="empty-record">
+                    <strong>아직 기록이 없어요.</strong>
+                    <span>첫 번째 댄서가 되어보세요!</span>
+                  </li>
+                )}
+                {game.subject === '칠판 낙서 왕' && scoreRecords['one-line'].length === 0 && (
+                  <li className="empty-record">
+                    <strong>아직 기록이 없어요.</strong>
+                    <span>첫 번째 낙서 왕이 되어보세요!</span>
                   </li>
                 )}
               </ol>
