@@ -859,7 +859,10 @@ image-slot.char::part(image) {
 }
 
 .site-section h2 {
+  font-family: 'Black Han Sans', 'Gaegu', sans-serif;
   font-size: clamp(54px, 6vw, 92px);
+  color: #1A1008;
+  text-shadow: 5px 5px 0 rgba(204,34,34,.18);
 }
 
 .report-cards {
@@ -943,9 +946,12 @@ image-slot.char::part(image) {
 
 .report-card h3 {
   margin: 0;
-  font-family: 'Dokdo', 'Gaegu', cursive;
-  font-size: clamp(34px, 2.9vw, 46px);
-  line-height: .95;
+  font-family: 'Black Han Sans', 'Gaegu', sans-serif;
+  font-size: clamp(27px, 2.2vw, 36px);
+  line-height: 1.08;
+  letter-spacing: 1px;
+  color: #1A1008;
+  text-shadow: 3px 3px 0 rgba(204,34,34,.22);
   white-space: nowrap;
 }
 
@@ -1004,6 +1010,36 @@ image-slot.char::part(image) {
   font-family: 'Black Han Sans', 'Gaegu', sans-serif;
   font-size: 21px;
   font-weight: 400;
+}
+
+.record-list .empty-record {
+  display: block;
+  min-height: auto;
+  padding: 18px 16px;
+  border: 2px dashed rgba(29,29,27,.22);
+  border-radius: 8px;
+  background: rgba(255,255,255,.28);
+  color: #7b6a4e;
+  text-align: center;
+  list-style: none;
+}
+
+.empty-record strong,
+.empty-record span {
+  display: block;
+  font-family: 'Gaegu', sans-serif;
+}
+
+.empty-record strong {
+  margin-bottom: 4px;
+  font-size: 25px;
+  font-weight: 700;
+  color: #5a4b34;
+}
+
+.empty-record span {
+  font-size: 20px;
+  line-height: 1.25;
 }
 
 .record-list time {
