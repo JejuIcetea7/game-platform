@@ -671,43 +671,19 @@ function drawCorridor(W, H) {
       // 창틀 목재
       ctx.fillStyle = '#B89858';
       ctx.fillRect(x - 5, wY - 5, wW + 10, wH + 10);
-      // 교실 내부 배경 (크림 벽)
-      ctx.fillStyle = '#EDE4CC';
+      // 하늘색 유리
+      ctx.fillStyle = '#87CEEB';
       ctx.fillRect(x, wY, wW, wH);
-      // 칠판 (교실 뒷벽에 보임)
-      const brdW = wW - 16, brdH = wH * 0.34;
-      ctx.fillStyle = '#3D7050';
-      ctx.fillRect(x + 8, wY + 6, brdW, brdH);
-      // 칠판 테두리
-      ctx.strokeStyle = '#2A5038'; ctx.lineWidth = 2;
-      ctx.strokeRect(x + 8, wY + 6, brdW, brdH);
-      // 칠판 글씨
-      ctx.fillStyle = 'rgba(255,255,255,.60)';
-      ctx.fillRect(x + 16, wY + 13, brdW * 0.38, 3);
-      ctx.fillRect(x + 16, wY + 19, brdW * 0.55, 3);
-      ctx.fillRect(x + 16, wY + 25, brdW * 0.28, 3);
-      // 책상들 (2열 × 4칸)
-      const deskW = (wW - 20) / 4 - 3;
-      const deskH = wH * 0.13;
-      const deskAreaY = wY + brdH + 10;
-      ctx.fillStyle = '#C8A858';
-      for (let row = 0; row < 2; row++) {
-        for (let col = 0; col < 4; col++) {
-          const dx = x + 8 + col * ((wW - 16) / 4);
-          const dy = deskAreaY + row * (deskH + 5);
-          ctx.fillRect(dx, dy, deskW, deskH);
-          ctx.strokeStyle = 'rgba(26,16,8,.25)'; ctx.lineWidth = 1;
-          ctx.strokeRect(dx, dy, deskW, deskH);
-        }
-      }
       // 창틀 세로 분할선
       ctx.strokeStyle = '#B89858'; ctx.lineWidth = 4;
       ctx.beginPath(); ctx.moveTo(x + wW/2, wY); ctx.lineTo(x + wW/2, wY + wH); ctx.stroke();
+      // 창틀 가로 분할선
+      ctx.beginPath(); ctx.moveTo(x, wY + wH*0.5); ctx.lineTo(x + wW, wY + wH*0.5); ctx.stroke();
       // 반사광
-      ctx.fillStyle = 'rgba(255,255,255,.22)';
+      ctx.fillStyle = 'rgba(255,255,255,.30)';
       ctx.beginPath();
-      ctx.moveTo(x + 4, wY + 4); ctx.lineTo(x + wW*0.36, wY + 4);
-      ctx.lineTo(x + 4, wY + wH*0.36); ctx.closePath(); ctx.fill();
+      ctx.moveTo(x + 4, wY + 4); ctx.lineTo(x + wW*0.38, wY + 4);
+      ctx.lineTo(x + 4, wY + wH*0.38); ctx.closePath(); ctx.fill();
       // 바깥 창틀 테두리
       ctx.strokeStyle = INK; ctx.lineWidth = 3;
       ctx.strokeRect(x, wY, wW, wH);
@@ -750,12 +726,6 @@ function drawCorridor(W, H) {
         ctx.strokeStyle = 'rgba(26,16,8,.25)'; ctx.lineWidth = 1;
         ctx.strokeRect(x + bW*p.fx, bY + bH*p.fy, bW*p.fw, bH*p.fh);
       });
-      // 압정
-      [[0.22, 0.08],[0.68, 0.08],[0.22, 0.6],[0.68, 0.6],[0.5, 0.08]].forEach(([fx,fy]) => {
-        ctx.fillStyle = '#CC2222';
-        ctx.beginPath(); ctx.arc(x + bW*fx, bY + bH*fy, 4.5, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = INK; ctx.lineWidth = 1.5; ctx.stroke();
-      });
       ctx.strokeStyle = INK; ctx.lineWidth = 2.5;
       ctx.strokeRect(x, bY, bW, bH);
     }
@@ -785,22 +755,19 @@ function drawCorridor(W, H) {
       // 목재 결 하이라이트
       ctx.fillStyle = 'rgba(255,255,255,.10)';
       ctx.fillRect(x + 3, doorTopY + 3, doorW*0.18, doorH - 6);
-      // 상단 유리창 (교실 내부 보임)
+      // 상단 유리창 — 하늘색
       const gwW = doorW - 20, gwH = doorH * 0.20;
       const gwX = x + 10, gwY = doorTopY + 12;
-      ctx.fillStyle = '#EDE4CC';
+      ctx.fillStyle = '#87CEEB';
       ctx.fillRect(gwX, gwY, gwW, gwH);
-      // 창 안 칠판
-      ctx.fillStyle = '#3D7050';
-      ctx.fillRect(gwX + 3, gwY + 3, gwW - 6, gwH * 0.48);
-      ctx.fillStyle = 'rgba(255,255,255,.55)';
-      ctx.fillRect(gwX + 7, gwY + 6, gwW * 0.38, 2.5);
-      ctx.fillRect(gwX + 7, gwY + 11, gwW * 0.22, 2);
-      // 창 안 책상
-      ctx.fillStyle = '#C8A858';
-      for (let di = 0; di < 3; di++) {
-        ctx.fillRect(gwX + 3 + di * (gwW/3), gwY + gwH*0.58, gwW/3 - 3, gwH*0.28);
-      }
+      // 반사광
+      ctx.fillStyle = 'rgba(255,255,255,.30)';
+      ctx.beginPath();
+      ctx.moveTo(gwX + 3, gwY + 3); ctx.lineTo(gwX + gwW*0.4, gwY + 3);
+      ctx.lineTo(gwX + 3, gwY + gwH*0.45); ctx.closePath(); ctx.fill();
+      // 창틀 세로 분할
+      ctx.strokeStyle = 'rgba(184,152,88,.9)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.moveTo(gwX + gwW/2, gwY); ctx.lineTo(gwX + gwW/2, gwY + gwH); ctx.stroke();
       ctx.strokeStyle = INK; ctx.lineWidth = 2;
       ctx.strokeRect(gwX, gwY, gwW, gwH);
       // 문 인셋 패널 2개 (세로)

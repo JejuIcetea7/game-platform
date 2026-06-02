@@ -449,7 +449,46 @@ function draw() {
   drawHUD();
   drawPopups();
   if(G.dancing) drawSparkles();
+  if(G.hiding) drawHidingEffect();
   if(G.caughtFlash>0) { drawFlash(); }
+}
+
+function drawHidingEffect() {
+  const t = Date.now();
+  // 파란 테두리 맥박 효과
+  const pulse = 0.4 + Math.sin(t/180)*0.25;
+  ctx.save();
+  ctx.globalAlpha = pulse;
+  ctx.strokeStyle = '#2980b9';
+  ctx.lineWidth = 6;
+  ctx.strokeRect(3, 3, W-6, H-6);
+  ctx.restore();
+
+  // 캐릭터 주변 파란 후광
+  ctx.save();
+  ctx.globalAlpha = 0.18 + Math.sin(t/200)*0.08;
+  ctx.fillStyle = '#5dade2';
+  ctx.beginPath();
+  ctx.ellipse(DESK_CX, DESK_CY - CHAR_H*0.5, 100, 160, 0, 0, Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // 말풍선: "공부하는 척..."
+  const bx = DESK_CX + 60, by = DESK_CY - CHAR_H - 10;
+  ctx.save();
+  ctx.fillStyle='#FAF3E3'; ctx.strokeStyle='#2980b9'; ctx.lineWidth=2.5;
+  // 풍선 몸통
+  rr(ctx, bx, by, 160, 42, 10); ctx.fill(); ctx.stroke();
+  // 꼬리
+  ctx.beginPath();
+  ctx.moveTo(bx+14, by+38); ctx.lineTo(bx-4, by+56); ctx.lineTo(bx+30, by+38);
+  ctx.closePath(); ctx.fillStyle='#FAF3E3'; ctx.fill();
+  ctx.strokeStyle='#2980b9'; ctx.lineWidth=2.5; ctx.stroke();
+  // 텍스트
+  ctx.fillStyle='#1A1008'; ctx.font="bold 18px 'Black Han Sans','Dokdo',cursive";
+  ctx.textAlign='left'; ctx.textBaseline='middle';
+  ctx.fillText('공부하는 척... 📖', bx+12, by+21);
+  ctx.restore();
 }
 
 // ── Background ───────────────────────────────────────────────────────────────
@@ -521,6 +560,23 @@ function drawBlackboard() {
   ctx.fillText('♡ 화이팅!!', bx+450, by+340);
   ctx.fillStyle='#ffe066'; ctx.font='22px serif';
   ctx.fillText('★', bx+640, by+48);
+  // 우측 하단 — 떠든 사람 낙서 (분필 긁은 느낌)
+  ctx.save();
+  ctx.globalAlpha=0.75;
+  ctx.fillStyle='#fffde7';
+  ctx.font="italic bold 15px 'Nanum Pen Script',cursive";
+  ctx.textAlign='right';
+  ctx.fillText('※ 떠든 사람', bx+BB.w-28, by+BB.h-52);
+  ctx.font="bold 22px 'Nanum Pen Script',cursive";
+  ctx.fillStyle='#ffe066';
+  ctx.fillText('아라 ✦', bx+BB.w-28, by+BB.h-28);
+  // 밑줄
+  ctx.strokeStyle='#ffe066'; ctx.lineWidth=1.5;
+  ctx.beginPath();
+  ctx.moveTo(bx+BB.w-120, by+BB.h-20);
+  ctx.lineTo(bx+BB.w-28, by+BB.h-20);
+  ctx.stroke();
+  ctx.restore();
   ctx.restore();
 }
 

@@ -49,16 +49,33 @@ function readLunchrunScores() {
   }
 }
 
+function readDanceScores() {
+  try {
+    const raw = localStorage.getItem('dance_scores')
+    const scores: Array<{ name: string; score: number; date: string }> = JSON.parse(raw || '[]')
+    return scores.slice(0, 5).map((s, i) => ({
+      rank: i + 1,
+      name: s.name,
+      score: `${s.score.toLocaleString()}점`,
+      date: s.date,
+    }))
+  } catch {
+    return []
+  }
+}
+
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [showGame, setShowGame] = useState<null | 'lunch' | 'dance'>(null)
   const [lunchrunRecords, setLunchrunRecords] = useState(() => readLunchrunScores())
+  const [danceRecords, setDanceRecords] = useState(() => readDanceScores())
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
       if (e.data?.type === 'closeGame') setShowGame(null)
       if (e.data?.type === 'lunchrunScoreAdded') setLunchrunRecords(readLunchrunScores())
+      if (e.data?.type === 'danceScoreAdded') setDanceRecords(readDanceScores())
     }
     window.addEventListener('message', onMsg)
     return () => window.removeEventListener('message', onMsg)
@@ -339,7 +356,12 @@ export default function App() {
               </div>
 
               <ol className="record-list" aria-label={`${game.subject} 명예의 전당 TOP 5`}>
-                {(game.subject === '급식 RUN!' ? lunchrunRecords : game.records).map((record) => (
+                {(game.subject === '급식 RUN!'
+                  ? lunchrunRecords
+                  : game.subject === '선생님 몰래 춤추기'
+                    ? danceRecords
+                    : game.records
+                ).map((record) => (
                   <li className={record.rank === 1 ? 'top-record' : undefined} key={`${game.subject}-${record.rank}`}>
                     <span className="rank">{record.rank}</span>
                     <strong>{record.name}</strong>
@@ -350,6 +372,11 @@ export default function App() {
                 {game.subject === '급식 RUN!' && lunchrunRecords.length === 0 && (
                   <li style={{ textAlign: 'center', color: '#aaa', padding: '12px 0', listStyle: 'none' }}>
                     아직 기록이 없어요. 첫 번째 주자가 되어보세요!
+                  </li>
+                )}
+                {game.subject === '선생님 몰래 춤추기' && danceRecords.length === 0 && (
+                  <li style={{ textAlign: 'center', color: '#aaa', padding: '12px 0', listStyle: 'none' }}>
+                    아직 기록이 없어요. 첫 번째 댄서가 되어보세요!
                   </li>
                 )}
               </ol>
