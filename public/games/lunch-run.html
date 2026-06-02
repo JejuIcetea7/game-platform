@@ -114,6 +114,71 @@ canvas { display:block; width:100%; height:100%; }
   min-width:64px; text-align:right;
 }
 
+/* ── 인트로 패널 ── */
+#intro-panel {
+  position:absolute; inset:0;
+  display:flex; align-items:center; justify-content:center;
+  background:rgba(250,243,227,0.97); z-index:30;
+}
+#intro-panel.hidden { display:none; }
+#intro-box {
+  background:#FAF3E3; border:4px solid #1A1008;
+  box-shadow:8px 8px 0 #1A1008;
+  padding:36px 52px; text-align:center;
+  max-width:600px; width:90%; position:relative;
+}
+#intro-box::before {
+  content:''; position:absolute; inset:6px;
+  border:2px dashed #c8b89a; pointer-events:none;
+}
+.intro-deco {
+  position:absolute; top:-14px; left:20px;
+  font-size:30px; color:#f7b6c4;
+}
+.intro-deco2 {
+  position:absolute; bottom:-12px; right:24px;
+  font-size:24px; color:#ffe066;
+}
+.intro-title {
+  font-family:'Black Han Sans',sans-serif; font-size:58px;
+  color:#1A1008; letter-spacing:3px; line-height:1;
+  text-shadow:4px 4px 0 #f7b6c4; margin-bottom:6px;
+}
+.intro-sub {
+  font-family:'Jua',sans-serif; font-size:18px;
+  color:#666; margin-bottom:22px;
+}
+.intro-how {
+  background:#fff9ee; border:2px solid #1A1008;
+  border-radius:3px; padding:16px 20px;
+  margin-bottom:22px; text-align:left;
+}
+.intro-how-title {
+  font-family:'Black Han Sans',sans-serif; font-size:20px;
+  color:#CC2222; margin-bottom:12px;
+}
+.intro-row {
+  display:flex; align-items:flex-start; gap:12px;
+  font-family:'Jua',sans-serif; font-size:17px;
+  color:#2c2c2c; line-height:1.8; margin-bottom:4px;
+}
+.intro-key {
+  display:inline-block; flex-shrink:0;
+  background:#1A1008; color:#FAF3E3;
+  font-family:'Black Han Sans',sans-serif;
+  font-size:13px; padding:2px 10px; border-radius:2px;
+  min-width:56px; text-align:center; margin-top:2px;
+}
+#btn-intro-start {
+  font-family:'Black Han Sans',sans-serif; font-size:30px;
+  background:#1A1008; color:#FAF3E3;
+  border:none; padding:13px 56px;
+  cursor:pointer; letter-spacing:2px;
+  box-shadow:5px 5px 0 #CC2222;
+  transition:transform .1s, box-shadow .1s;
+}
+#btn-intro-start:hover { transform:translate(2px,2px); box-shadow:3px 3px 0 #CC2222; }
+
 /* ── 스타트 패널 ── */
 #start-panel {
   position:absolute; top:44px; left:0; right:0; bottom:50px;
@@ -306,7 +371,7 @@ canvas { display:block; width:100%; height:100%; }
       <span class="hud-label">이동거리</span>
       <span id="dist-val">0m</span>
     </div>
-    <button id="btn-howto">조작법 ?</button>
+    <div style="min-width:72px"></div>
   </div>
 
   <div id="hud-bot">
@@ -357,29 +422,24 @@ canvas { display:block; width:100%; height:100%; }
     </div>
   </div>
 
-  <!-- 모달 -->
-  <div id="modal" class="hidden">
-    <div id="modal-box">
-      <h3>📋 조작 방법</h3>
-      <div class="m-row">
-        <span class="m-k">SPACE</span>
-        <span class="m-desc">게임 시작 — 오른쪽으로 기울며 출발!</span>
+  <!-- 인트로 화면 -->
+  <div id="intro-panel">
+    <div id="intro-box">
+      <div class="intro-deco">✦</div>
+      <div class="intro-title">급식 RUN!</div>
+      <div class="intro-sub">— 외발자전거로 급식실까지 달려라! —</div>
+      <div class="intro-how">
+        <div class="intro-how-title">📋 조작 방법</div>
+        <div class="intro-row"><span class="intro-key">SPACE</span><span>게임 시작! 오른쪽으로 기울며 출발!</span></div>
+        <div class="intro-row"><span class="intro-key">◀ ▶</span><span><b>톡·탁</b> 끊어 눌러 균형을 잡아요</span></div>
+        <div class="intro-row"><span class="intro-key">⚠</span><span>1초만 손 떼도 쓰러져요! 속도↑ = 더 자주!</span></div>
+        <div class="intro-row"><span class="intro-key">R</span><span>게임오버 후 다시 시작</span></div>
       </div>
-      <div class="m-row">
-        <span class="m-k">◀ ▶</span>
-        <span class="m-desc"><b>톡·탁·톡·탁</b> 끊어서 눌러야 해요!<br>오래 누르면 그 방향으로 확 기울어져요.</span>
-      </div>
-      <div class="m-row">
-        <span class="m-k">⚠</span>
-        <span class="m-desc"><b>1초만 손 떼도 쓰러져요!</b><br>속도가 빨라질수록 더 자주 눌러야 해요.</span>
-      </div>
-      <div class="m-row">
-        <span class="m-k">R</span>
-        <span class="m-desc">게임 오버 후 다시 시작</span>
-      </div>
-      <button class="ink-btn" id="btn-modal-close" style="margin-top:6px">닫기</button>
+      <button id="btn-intro-start">게임 시작!</button>
+      <div class="intro-deco2">✦</div>
     </div>
   </div>
+
 </div>
 
 <script>
@@ -976,11 +1036,8 @@ function loop(ts) {
 requestAnimationFrame(loop);
 
 // ── 버튼 ─────────────────────────────────────────────────────────────────
-document.getElementById('btn-howto').addEventListener('click', () => {
-  document.getElementById('modal').classList.remove('hidden');
-});
-document.getElementById('btn-modal-close').addEventListener('click', () => {
-  document.getElementById('modal').classList.add('hidden');
+document.getElementById('btn-intro-start').addEventListener('click', () => {
+  document.getElementById('intro-panel').classList.add('hidden');
 });
 document.getElementById('btn-restart').addEventListener('click', resetGame);
 document.getElementById('btn-main').addEventListener('click', closeGame);

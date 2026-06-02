@@ -52,12 +52,12 @@ function readLunchrunScores() {
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
-  const [showGame, setShowGame] = useState(false)
+  const [showGame, setShowGame] = useState<null | 'lunch' | 'dance'>(null)
   const [lunchrunRecords, setLunchrunRecords] = useState(() => readLunchrunScores())
 
   useEffect(() => {
     const onMsg = (e: MessageEvent) => {
-      if (e.data?.type === 'closeGame') setShowGame(false)
+      if (e.data?.type === 'closeGame') setShowGame(null)
       if (e.data?.type === 'lunchrunScoreAdded') setLunchrunRecords(readLunchrunScores())
     }
     window.addEventListener('message', onMsg)
@@ -93,7 +93,8 @@ export default function App() {
     const rowCleanups: Array<() => void> = []
     document.querySelectorAll<HTMLElement>('.row').forEach(r => {
       const onClick = () => {
-        if (r.dataset.game === 'unicycle') { setShowGame(true); return; }
+        if (r.dataset.game === 'unicycle') { setShowGame('lunch'); return; }
+        if (r.dataset.game === 'lovebeat') { setShowGame('dance'); return; }
         const burst = document.createElement('div')
         burst.textContent = '✦'
         burst.style.cssText = `position:absolute;left:${r.offsetLeft + 40}px;top:${r.offsetTop - 10}px;
@@ -127,7 +128,7 @@ export default function App() {
         </div>
 
         <div className="hero-frame" ref={heroFrameRef}>
-          {showGame && (
+          {showGame === 'lunch' && (
             <iframe
               src="/games/lunch-run.html"
               style={{
@@ -135,6 +136,17 @@ export default function App() {
                 width: '100%', height: '100%', border: 'none',
               }}
               title="급식 RUN!"
+              allowFullScreen
+            />
+          )}
+          {showGame === 'dance' && (
+            <iframe
+              src="/games/dance-teacher.html"
+              style={{
+                position: 'absolute', inset: 0, zIndex: 100,
+                width: '100%', height: '100%', border: 'none',
+              }}
+              title="선생님 몰래 춤추기"
               allowFullScreen
             />
           )}

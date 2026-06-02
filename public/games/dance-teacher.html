@@ -1,0 +1,916 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>선생님 몰래 춤추기</title>
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&family=Dokdo&family=Black+Han+Sans&family=Jua&display=swap" rel="stylesheet">
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #1A1008; }
+#wrap {
+  position: relative; width: 100%; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+#c { display: block; }
+
+/* Overlay */
+#overlay {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.screen {
+  display: none; flex-direction: column;
+  align-items: center; justify-content: center;
+  width: 100%; height: 100%;
+  pointer-events: all;
+  font-family: 'Nanum Pen Script', cursive;
+  position: absolute; inset: 0;
+}
+.screen.active { display: flex; }
+
+/* Top game buttons */
+#top-btns {
+  position: absolute; top: 0; left: 0; right: 0;
+  display: none; justify-content: space-between; align-items: flex-start;
+  padding: 10px 14px; z-index: 150; pointer-events: none;
+}
+#top-btns.visible { display: flex; }
+.top-btn {
+  font-family: 'Dokdo', cursive; font-size: 17px;
+  background: #FAF3E3; color: #1A1008;
+  border: 2.5px solid #1A1008; padding: 6px 14px;
+  cursor: pointer; box-shadow: 3px 3px 0 #1A1008;
+  transition: transform .1s, box-shadow .1s;
+  pointer-events: all;
+}
+.top-btn:hover { transform: translate(1px,1px); box-shadow: 2px 2px 0 #1A1008; }
+
+
+/* Intro */
+#intro-screen { background: rgba(250,243,227,0.97); }
+.intro-inner {
+  background: #FAF3E3;
+  border: 4px solid #1A1008;
+  box-shadow: 8px 8px 0 #1A1008;
+  padding: 36px 56px;
+  max-width: 680px; width: 90%;
+  position: relative;
+}
+.intro-inner::before {
+  content: ''; position: absolute; inset: 6px;
+  border: 2px dashed #c8b89a; pointer-events: none;
+}
+.game-title {
+  font-family: 'Black Han Sans', 'Dokdo', cursive; font-size: 54px;
+  color: #1A1008; text-align: center; line-height: 1.1;
+  margin-bottom: 6px; text-shadow: 3px 3px 0 #f7b6c4;
+  letter-spacing: 2px;
+}
+.game-subtitle { font-family: 'Jua', sans-serif; font-size: 20px; color: #555; text-align: center; margin-bottom: 24px; }
+.how-to {
+  background: #fff9ee; border: 2px solid #1A1008;
+  border-radius: 4px; padding: 16px 22px; margin-bottom: 22px;
+}
+.how-to h3 { font-family: 'Black Han Sans', sans-serif; font-size: 22px; margin-bottom: 12px; color: #c0392b; }
+.how-to p { font-family: 'Jua', sans-serif; font-size: 19px; line-height: 2.1; color: #2c2c2c; }
+.key {
+  display: inline-block; background: #1A1008; color: #FAF3E3;
+  padding: 1px 7px; border-radius: 3px; font-family: monospace; font-size: 14px;
+}
+.stamp-deco {
+  position: absolute; top: 16px; right: 26px;
+  font-family: 'Dokdo', cursive; font-size: 17px; color: #c0392b;
+  border: 3px solid #c0392b; padding: 3px 7px; border-radius: 50%;
+  transform: rotate(15deg); opacity: 0.7;
+}
+.btn-start {
+  font-family: 'Dokdo', cursive; font-size: 30px;
+  background: #1A1008; color: #FAF3E3; border: none;
+  padding: 13px 56px; cursor: pointer;
+  box-shadow: 5px 5px 0 #c0392b;
+  transition: transform .1s, box-shadow .1s; letter-spacing: 2px;
+}
+.btn-start:hover { transform: translate(2px,2px); box-shadow: 3px 3px 0 #c0392b; }
+.deco { position: absolute; font-size: 34px; color: #f7b6c4; pointer-events: none; }
+
+/* Gameover */
+#gameover-screen { background: rgba(26,16,8,0.88); }
+.gameover-box {
+  background: #FAF3E3; border: 5px solid #1A1008;
+  box-shadow: 10px 10px 0 #c0392b;
+  padding: 38px 56px; text-align: center; min-width: 380px;
+}
+.gameover-title {
+  font-family: 'Dokdo', cursive; font-size: 60px; color: #c0392b;
+  text-shadow: 3px 3px 0 #1A1008; margin-bottom: 8px;
+}
+.gameover-score { font-size: 26px; color: #1A1008; margin-bottom: 22px; }
+.name-input-wrap {
+  display: none; flex-direction: column; align-items: center; gap: 9px; margin-bottom: 16px;
+}
+.name-input-wrap.show { display: flex; }
+.name-input-wrap input {
+  font-family: 'Nanum Pen Script', cursive; font-size: 22px;
+  border: 3px solid #1A1008; padding: 7px 16px;
+  background: #fff9ee; text-align: center; width: 190px; outline: none;
+}
+.btn-group { display: flex; gap: 13px; justify-content: center; flex-wrap: wrap; }
+.btn {
+  font-family: 'Dokdo', cursive; font-size: 22px; border: 3px solid #1A1008;
+  padding: 9px 28px; cursor: pointer; box-shadow: 4px 4px 0 #1A1008;
+  transition: transform .1s, box-shadow .1s; background: #FAF3E3;
+}
+.btn:hover { transform: translate(2px,2px); box-shadow: 2px 2px 0 #1A1008; }
+.btn.primary { background: #1A1008; color: #FAF3E3; }
+.btn.red { background: #c0392b; color: #FAF3E3; }
+
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+
+  <!-- Top buttons (visible during gameplay) -->
+  <div id="top-btns">
+    <button class="top-btn" id="btn-home" onclick="window.parent.postMessage({type:'closeGame'},'*')">← 메인화면</button>
+  </div>
+
+  <div id="overlay">
+    <div class="screen active" id="intro-screen">
+      <div class="intro-inner">
+        <div class="stamp-deco">2교시</div>
+        <div class="deco" style="top:-18px;left:18px">✦</div>
+        <div class="deco" style="top:-8px;right:28px;font-size:22px;color:#ffe066">★</div>
+        <div class="game-title">선생님 몰래<br>춤추기!</div>
+        <div class="game-subtitle">— 들키면 아웃! 끝까지 버텨라! —</div>
+        <div class="how-to">
+          <h3>📋 플레이 방법</h3>
+          <p>
+            🕺 <span class="key">← → ↑ ↓</span> 첫 입력부터 춤이 시작돼!<br>
+            🎵 떨어지는 노트에 맞춰 방향키를 눌러 점수 획득!<br>
+            👁️ 선생님 머리 위 <b>느낌표(!)가 뜨면</b> 위험 신호!<br>
+            🧑‍🎓 <span class="key">SPACE</span> 를 눌러 공부하는 척 앉아! (노트 멈춤)<br>
+            ⚠️ 선생님이 돌아봤을 때 춤추고 있으면 <b style="color:#c0392b">즉시 아웃!</b><br>
+            🔔 수업 종료 종이 울릴 때까지 버티면 <b>SUCCESS!</b>
+          </p>
+        </div>
+        <div style="text-align:center">
+          <button class="btn-start" id="btn-start">게임 시작!</button>
+        </div>
+        <div class="deco" style="bottom:-16px;left:56px;font-size:26px">✦</div>
+        <div class="deco" style="bottom:-8px;right:36px;font-size:20px;color:#ffe066">✦</div>
+      </div>
+    </div>
+
+    <div class="screen" id="gameover-screen">
+      <div class="gameover-box">
+        <div class="gameover-title" id="go-title">걸렸다!</div>
+        <div class="gameover-score" id="go-score">최종 점수: 0점</div>
+        <div class="name-input-wrap" id="name-wrap">
+          <div style="font-size:19px">닉네임을 입력하세요</div>
+          <input type="text" id="name-input" maxlength="8" placeholder="닉네임">
+        </div>
+        <div class="btn-group">
+          <button class="btn primary" id="btn-retry">다시하기</button>
+          <button class="btn red" id="btn-record">기록하기</button>
+          <button class="btn" id="btn-submit" style="display:none">등록!</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── Canvas ──────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+const W = 1280, H = 720;
+canvas.width = W; canvas.height = H;
+
+function resize() {
+  const w = document.getElementById('wrap');
+  const s = Math.min(w.clientWidth / W, w.clientHeight / H);
+  canvas.style.width = W*s+'px'; canvas.style.height = H*s+'px';
+}
+resize(); window.addEventListener('resize', resize);
+
+// ── Images ──────────────────────────────────────────────────────────────────
+function img(src){ const i=new Image(); i.src=src; return i; }
+const IMG = {
+  charTable: img('/characters/character_table.png'),
+  table:     img('/characters/table.png'),
+  dance:     Array.from({length:10},(_,i)=>img(`/characters/dancing_character_${i+1}.png`)),
+  stumble:   img('/characters/stumbling_character.png'),
+  write:     img('/characters/writing_teacher.png'),
+  warn:      img('/characters/warning_teacher.png'),
+  turn:      img('/characters/turned_teacher.png'),
+};
+
+// ── Note lane layout ─────────────────────────────────────────────────────────
+// 4 columns: ← ↑ ↓ →  in left panel
+const LANE_ORDER = ['left','up','down','right']; // column 0‥3
+const LANE_COL_W = 48;
+const PANEL_X = 12;
+const PANEL_W = LANE_COL_W * 4 + 8; // 200
+const LANE_X = LANE_ORDER.map((_,i) => PANEL_X + 4 + LANE_COL_W*i + LANE_COL_W/2);
+// LANE_X = [~36, ~84, ~132, ~180]
+
+const NOTE_TOP   = 68;
+const HIT_Y      = 610;
+const KEY_IND_Y  = HIT_Y + 8;  // key indicator top
+const KEY_IND_H  = 42;
+const NOTE_SIZE  = 38;
+const NOTE_SPEED = 280; // px/s
+const NOTE_INTERVAL = 700; // ms between notes
+const WIN_PERFECT = 40, WIN_GOOD = 80;
+
+const DIR_SYM   = {left:'←', up:'↑', down:'↓', right:'→'};
+const DIR_COLOR = {left:'#e74c3c', up:'#f1c40f', down:'#2ecc71', right:'#3498db'};
+const DIR_KEY   = {ArrowLeft:'left', ArrowUp:'up', ArrowDown:'down', ArrowRight:'right'};
+
+const GAME_DURATION = 60;
+
+// ── State ────────────────────────────────────────────────────────────────────
+let G = {};
+
+function initState() {
+  G = {
+    phase: 'intro',
+    score: 0, combo: 0, maxCombo: 0,
+    timer: GAME_DURATION,
+    notes: [], nextNote: NOTE_INTERVAL, noteId: 0,
+    // teacher
+    tState: 'writing', // writing | warning | turned
+    tTimer: 0,
+    nextEvent: 5 + Math.random()*9,
+    warnDur: 1.8, turnDur: 2.4,
+    // student
+    hasStarted: true,   // notes start immediately on game start
+    dancing: false,     // dancing starts on first arrow key press
+    hiding: false,      // space pressed → sitting
+    danceFrame: 0, danceFrameT: 0,
+    stumbleTimer: 0,    // >0 = show stumble image
+    everDanced: false,  // tracks if player ever pressed arrow
+    // effects
+    popups: [], hitFx: [], caughtFlash: 0,
+    sparkles: Array.from({length:10},makeSparkle),
+  };
+}
+
+function makeSparkle() {
+  return { x:700+Math.random()*500, y:100+Math.random()*500, t:Math.random()*Math.PI*2 };
+}
+
+// ── Input ────────────────────────────────────────────────────────────────────
+const keys = new Set();
+document.addEventListener('keydown', e => {
+  if(keys.has(e.code)) return;
+  keys.add(e.code);
+  if(G.phase !== 'playing') return;
+  e.preventDefault();
+
+  if(e.code === 'Space') {
+    G.hiding = true;
+    G.dancing = false;
+    return;
+  }
+  const dir = DIR_KEY[e.code];
+  if(dir) {
+    if(!G.hiding) {
+      G.dancing = true;
+      G.everDanced = true;
+      tryHit(dir);
+    }
+  }
+});
+document.addEventListener('keyup', e => {
+  keys.delete(e.code);
+  if(e.code === 'Space' && G.phase === 'playing') {
+    G.hiding = false;
+    if(G.everDanced && G.tState === 'writing') G.dancing = true;
+  }
+});
+
+function tryHit(dir) {
+  const laneIdx = LANE_ORDER.indexOf(dir);
+  const cx = LANE_X[laneIdx];
+  let best = null, bestDist = Infinity;
+  for(const n of G.notes) {
+    if(n.dir !== dir) continue;
+    const d = Math.abs(n.y - HIT_Y);
+    if(d < WIN_GOOD && d < bestDist) { best = n; bestDist = d; }
+  }
+  if(best) {
+    const perfect = bestDist < WIN_PERFECT;
+    G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
+    G.score += (perfect ? 100 : 50) * Math.ceil(G.combo/5);
+    addPopup(perfect?'PERFECT!':'GOOD!', perfect?'#f7b6c4':'#ffe066', cx, HIT_Y-28);
+    addHitFx(cx, HIT_Y, DIR_COLOR[dir]);
+    best.dead = true;
+  } else {
+    // only penalise if there's a note in that lane somewhere
+    if(G.notes.some(n=>n.dir===dir && !n.dead)) {
+      G.combo = 0;
+      G.stumbleTimer = 1.5;
+      addPopup('MISS', '#e74c3c', cx, HIT_Y-28);
+    }
+  }
+}
+
+function addPopup(text, color, x, y) {
+  G.popups.push({text, color, x, y, life:1});
+}
+function addHitFx(x, y, color) {
+  G.hitFx.push({x, y, color, life:1, r:0});
+  for(let i=0;i<6;i++) G.hitFx.push({
+    type:'line', x, y, color, life:1,
+    angle: Math.random()*Math.PI*2,
+    len: 30+Math.random()*50,
+  });
+}
+
+// ── Loop ─────────────────────────────────────────────────────────────────────
+let last = 0;
+function loop(ts) {
+  const dt = Math.min((ts-last)/1000, 0.05); last = ts;
+  if(G.phase==='playing') update(dt);
+  draw();
+  requestAnimationFrame(loop);
+}
+
+function update(dt) {
+  G.timer -= dt;
+  if(G.timer <= 0) { G.timer=0; endGame('success'); return; }
+
+  // Stumble timer
+  if(G.stumbleTimer > 0) {
+    G.stumbleTimer -= dt;
+    if(G.stumbleTimer <= 0) G.stumbleTimer = 0;
+  }
+
+  // Notes – stop ONLY when teacher is warning/turned AND hiding
+  const notePaused = G.hiding && (G.tState === 'warning' || G.tState === 'turned');
+  if(!notePaused) {
+    G.nextNote -= dt*1000;
+    if(G.nextNote <= 0) {
+      spawnNote();
+      G.nextNote = NOTE_INTERVAL + (Math.random()-0.5)*200;
+    }
+    for(const n of G.notes) {
+      n.y += NOTE_SPEED*dt;
+      if(n.y > HIT_Y + WIN_GOOD + 8 && !n.dead) {
+        G.combo = 0;
+        G.stumbleTimer = 1.5; // show stumble image
+        addPopup('MISS', '#e74c3c', LANE_X[LANE_ORDER.indexOf(n.dir)], HIT_Y-28);
+        n.dead = true;
+      }
+    }
+  }
+  G.notes = G.notes.filter(n => !n.dead && n.y < H+60);
+
+  // Teacher events
+  G.tTimer += dt;
+  if(G.tState === 'writing') {
+    if(G.tTimer >= G.nextEvent) { G.tState='warning'; G.tTimer=0; }
+  } else if(G.tState === 'warning') {
+    if(G.tTimer >= G.warnDur) {
+      G.tState = 'turned'; G.tTimer = 0;
+      // Caught check at moment of turning
+      if(G.dancing && !G.hiding) { endGame('caught'); return; }
+    }
+  } else { // turned
+    if(G.dancing && !G.hiding) { endGame('caught'); return; }
+    if(G.tTimer >= G.turnDur) {
+      G.tState = 'writing'; G.tTimer = 0;
+      G.nextEvent = 5 + Math.random()*9;
+      // Resume dancing after teacher turns back (only if player already started)
+      if(!G.hiding && G.everDanced) G.dancing = true;
+    }
+  }
+
+  // Dance frame animation
+  if(G.dancing) {
+    G.danceFrameT += dt;
+    if(G.danceFrameT >= 0.1) { G.danceFrameT=0; G.danceFrame=(G.danceFrame+1)%10; }
+  }
+
+  // Popups
+  for(const p of G.popups) p.life -= dt*2; G.popups = G.popups.filter(p=>p.life>0);
+
+  // Hit FX
+  for(const h of G.hitFx) {
+    h.life -= dt*2.5;
+    if(h.r !== undefined) h.r += dt*110;
+  }
+  G.hitFx = G.hitFx.filter(h=>h.life>0);
+
+  // Sparkles
+  for(const s of G.sparkles) s.t += dt*2;
+}
+
+function spawnNote() {
+  const laneIdx = Math.floor(Math.random()*4);
+  G.notes.push({
+    id: G.noteId++,
+    dir: LANE_ORDER[laneIdx],
+    laneIdx,
+    x: LANE_X[laneIdx],
+    y: NOTE_TOP - NOTE_SIZE,
+    dead: false,
+  });
+}
+
+function endGame(type) {
+  G.phase = type;
+  if(type==='caught') G.caughtFlash = 1;
+  const el = document.getElementById('gameover-screen');
+  el.classList.add('active');
+  document.getElementById('go-title').textContent = type==='caught' ? '걸렸다! 😱' : '수업 종료! 🎉';
+  document.getElementById('go-title').style.color = type==='caught' ? '#c0392b' : '#2ecc71';
+  document.getElementById('go-score').textContent =
+    `최종 점수: ${G.score.toLocaleString()}점  |  최고 콤보: ${G.maxCombo}`;
+  document.getElementById('name-wrap').classList.remove('show');
+  document.getElementById('btn-submit').style.display='none';
+  document.getElementById('btn-record').style.display='';
+}
+
+// ── Draw ─────────────────────────────────────────────────────────────────────
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  drawBg();
+  drawBlackboard();
+  drawStudentArea();
+  drawTeacher();
+  drawNotePanel();
+  drawNotes();
+  drawHitFx();
+  drawHUD();
+  drawPopups();
+  if(G.dancing) drawSparkles();
+  if(G.caughtFlash>0) { drawFlash(); }
+}
+
+// ── Background ───────────────────────────────────────────────────────────────
+function drawBg() {
+  ctx.fillStyle='#f0e6cc'; ctx.fillRect(0,0,W,H);
+  // halftone
+  ctx.save(); ctx.globalAlpha=0.035; ctx.fillStyle='#1A1008';
+  for(let x=0;x<W;x+=11) for(let y=0;y<H;y+=11){
+    ctx.beginPath(); ctx.arc(x,y,1.4,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+  // floor
+  ctx.fillStyle='#e8d9b8'; ctx.fillRect(0,560,W,H-560);
+  ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(0,560); ctx.lineTo(W,560); ctx.stroke();
+  ctx.strokeStyle='#c8b08a'; ctx.lineWidth=1;
+  for(let x=0;x<W;x+=80){ ctx.beginPath(); ctx.moveTo(x,560); ctx.lineTo(x,H); ctx.stroke(); }
+  for(let y=560;y<H;y+=55){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+  // lower wall strip
+  ctx.fillStyle='#e0d0a8';
+  ctx.fillRect(0,490,W,70); // wainscot
+  ctx.strokeStyle='#1A1008'; ctx.lineWidth=2;
+  ctx.beginPath(); ctx.moveTo(0,490); ctx.lineTo(W,490); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(0,560); ctx.lineTo(W,560); ctx.stroke();
+}
+
+// ── Blackboard (center) ──────────────────────────────────────────────────────
+const BB = {x:260, y:18, w:700, h:380};
+function drawBlackboard() {
+  // shadow
+  ctx.fillStyle='#1A1008'; ctx.fillRect(BB.x+7,BB.y+7,BB.w,BB.h);
+  // board
+  ctx.fillStyle='#3a6b47'; ctx.fillRect(BB.x,BB.y,BB.w,BB.h);
+  ctx.strokeStyle='#1A1008'; ctx.lineWidth=5; ctx.strokeRect(BB.x,BB.y,BB.w,BB.h);
+  // inner frame
+  ctx.strokeStyle='#4d8560'; ctx.lineWidth=2;
+  ctx.strokeRect(BB.x+10,BB.y+10,BB.w-20,BB.h-20);
+  // chalk tray
+  ctx.fillStyle='#5a3e28'; ctx.fillRect(BB.x,BB.y+BB.h,BB.w,18);
+  ctx.strokeStyle='#1A1008'; ctx.lineWidth=2; ctx.strokeRect(BB.x,BB.y+BB.h,BB.w,18);
+  ['#fff9ee','#f7b6c4','#ffe066','#adf7b6'].forEach((c,i)=>{
+    ctx.fillStyle=c; ctx.strokeStyle='#1A1008'; ctx.lineWidth=1.5;
+    ctx.fillRect(BB.x+60+i*90,BB.y+BB.h+3,55,12);
+    ctx.strokeRect(BB.x+60+i*90,BB.y+BB.h+3,55,12);
+  });
+
+  // chalk writing
+  ctx.save();
+  ctx.globalAlpha=0.88; ctx.fillStyle='#fffde7';
+  ctx.font="bold 19px 'Nanum Pen Script',cursive";
+  const bx=BB.x, by=BB.y;
+  ctx.fillText('이차방정식의 풀이', bx+40, by+52);
+  ctx.strokeStyle='#fffde7'; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(bx+40,by+58); ctx.lineTo(bx+270,by+58); ctx.stroke();
+  ctx.font="18px 'Nanum Pen Script',cursive";
+  ctx.fillText('x² + 2x + 1 = 0', bx+40, by+90);
+  ctx.fillText('∴  x = -1  (중근)', bx+40, by+118);
+  ctx.font="16px 'Nanum Pen Script',cursive";
+  ctx.fillText('y = ax² + bx + c', bx+40, by+162);
+  ctx.fillText('꼭짓점 : ( -b/2a ,  판별식 )', bx+40, by+188);
+  ctx.fillText('D = b² - 4ac', bx+40, by+228);
+  ctx.fillText('D > 0  →  두 실근', bx+40, by+252);
+  ctx.fillText('D = 0  →  중근', bx+40, by+274);
+  ctx.fillText('D < 0  →  허근', bx+40, by+296);
+  // right side notes
+  ctx.fillStyle='#adf7b6'; ctx.font="18px 'Nanum Pen Script',cursive";
+  ctx.fillText('⭐ 시험 출제 예정!', bx+430, by+80);
+  ctx.fillStyle='#f7b6c4'; ctx.font="20px 'Nanum Pen Script',cursive";
+  ctx.fillText('♡ 화이팅!!', bx+450, by+340);
+  ctx.fillStyle='#ffe066'; ctx.font='22px serif';
+  ctx.fillText('★', bx+640, by+48);
+  ctx.restore();
+}
+
+// ── Classmates (silhouettes) ─────────────────────────────────────────────────
+function drawClassmates() {
+  const ppl = [
+    {x:230, y:440, s:0.75},
+    {x:1010, y:445, s:0.78},
+    {x:1110, y:435, s:0.82},
+    {x:1210, y:450, s:0.72},
+  ];
+  for(const p of ppl) {
+    ctx.save(); ctx.translate(p.x,p.y); ctx.scale(p.s,p.s);
+    ctx.fillStyle='#c8a87a'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=2;
+    ctx.fillRect(-36,-10,72,13); ctx.strokeRect(-36,-10,72,13);
+    ctx.fillRect(-30,3,7,32); ctx.strokeRect(-30,3,7,32);
+    ctx.fillRect(23,3,7,32); ctx.strokeRect(23,3,7,32);
+    ctx.fillStyle='#2c2c2c';
+    ctx.fillRect(-14,-55,28,45);
+    ctx.beginPath(); ctx.arc(0,-65,16,0,Math.PI*2); ctx.fill();
+    ctx.fillRect(-14,-14,32,9);
+    ctx.strokeStyle='#1A1008'; ctx.lineWidth=1.5;
+    ctx.strokeRect(-14,-55,28,45);
+    ctx.beginPath(); ctx.arc(0,-65,16,0,Math.PI*2); ctx.stroke();
+    ctx.strokeRect(-14,-14,32,9);
+    ctx.restore();
+  }
+}
+
+// ── Student area ─────────────────────────────────────────────────────────────
+// Sitting desk centered around x=780, dancing char at x=870
+// Sitting char and empty desk: same anchor point — bottom of char at floor line
+const DESK_CX = 800, DESK_CY = 630;  // lowered to floor
+// Dancing char: to the right of desk, same floor level
+const DANCE_CX = 890, DANCE_CY = 630;
+const CHAR_H = 310; // unified character height
+
+function drawStudentArea() {
+  if(G.hiding || !G.dancing) {
+    // Sitting: character_table.png — big size
+    if(IMG.charTable.complete && IMG.charTable.naturalWidth>0) {
+      const ih=CHAR_H, iw=ih*(IMG.charTable.naturalWidth/IMG.charTable.naturalHeight);
+      ctx.drawImage(IMG.charTable, DESK_CX-iw/2, DESK_CY-ih, iw, ih);
+    } else fallbackSit();
+  } else {
+    // Empty desk — same width/position as sitting char's desk portion
+    if(IMG.table.complete && IMG.table.naturalWidth>0) {
+      const ih=CHAR_H, iw=ih*(IMG.table.naturalWidth/IMG.table.naturalHeight);
+      ctx.drawImage(IMG.table, DESK_CX-iw/2, DESK_CY-ih, iw, ih);
+    } else fallbackDesk();
+    // Stumble or dance
+    if(G.stumbleTimer > 0) {
+      drawStumble();
+    } else {
+      drawDancer();
+    }
+  }
+}
+
+function drawStumble() {
+  const f = IMG.stumble;
+  const shakeX = (Math.random()-0.5)*6;
+  if(f && f.complete && f.naturalWidth>0) {
+    const ih=CHAR_H, iw=ih*(f.naturalWidth/f.naturalHeight);
+    ctx.drawImage(f, DANCE_CX-iw/2+shakeX, DANCE_CY-ih, iw, ih);
+  } else {
+    // fallback: tilt the dance frame
+    const t=Date.now()/200;
+    ctx.save(); ctx.translate(DANCE_CX+shakeX, DANCE_CY); ctx.rotate(0.35);
+    ctx.fillStyle='#ffcc90'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,-108,22,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#ffe0b2'; ctx.fillRect(-18,-86,36,55); ctx.strokeRect(-18,-86,36,55);
+    ctx.restore();
+  }
+}
+
+function drawDancer() {
+  const f = IMG.dance[G.danceFrame];
+  const bounce = Math.sin(Date.now()/120)*5;
+  if(f && f.complete && f.naturalWidth>0) {
+    const ih=CHAR_H, iw=ih*(f.naturalWidth/f.naturalHeight);
+    ctx.drawImage(f, DANCE_CX-iw/2, DANCE_CY-ih+bounce, iw, ih);
+  } else fallbackDance();
+  // rotating halo lines
+  ctx.save(); ctx.globalAlpha=0.2; ctx.strokeStyle='#f7b6c4'; ctx.lineWidth=2;
+  for(let i=0;i<7;i++){
+    const a=(i/7)*Math.PI*2+Date.now()/700;
+    ctx.beginPath();
+    ctx.moveTo(DANCE_CX+Math.cos(a)*80, DANCE_CY-120+Math.sin(a)*40);
+    ctx.lineTo(DANCE_CX+Math.cos(a)*120, DANCE_CY-120+Math.sin(a)*60);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function fallbackSit() {
+  ctx.save(); ctx.strokeStyle='#1A1008'; ctx.lineWidth=2.5;
+  ctx.fillStyle='#c8a87a';
+  ctx.fillRect(DESK_CX-55,DESK_CY-10,110,14); ctx.strokeRect(DESK_CX-55,DESK_CY-10,110,14);
+  ctx.fillRect(DESK_CX-48,DESK_CY+4,8,38); ctx.strokeRect(DESK_CX-48,DESK_CY+4,8,38);
+  ctx.fillRect(DESK_CX+40,DESK_CY+4,8,38); ctx.strokeRect(DESK_CX+40,DESK_CY+4,8,38);
+  ctx.fillStyle='#ffcc90';
+  ctx.beginPath(); ctx.arc(DESK_CX,DESK_CY-86,20,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#ffe0b2';
+  ctx.fillRect(DESK_CX-17,DESK_CY-66,34,56); ctx.strokeRect(DESK_CX-17,DESK_CY-66,34,56);
+  ctx.fillRect(DESK_CX-35,DESK_CY-18,70,10); ctx.strokeRect(DESK_CX-35,DESK_CY-18,70,10);
+  ctx.restore();
+}
+function fallbackDesk() {
+  ctx.save(); ctx.fillStyle='#c8a87a'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=2.5;
+  ctx.fillRect(DESK_CX-55,DESK_CY-10,110,14); ctx.strokeRect(DESK_CX-55,DESK_CY-10,110,14);
+  ctx.fillRect(DESK_CX-48,DESK_CY+4,8,38); ctx.strokeRect(DESK_CX-48,DESK_CY+4,8,38);
+  ctx.fillRect(DESK_CX+40,DESK_CY+4,8,38); ctx.strokeRect(DESK_CX+40,DESK_CY+4,8,38);
+  ctx.restore();
+}
+function fallbackDance() {
+  const t=Date.now()/200;
+  ctx.save(); ctx.translate(DANCE_CX,DANCE_CY); ctx.rotate(Math.sin(t)*0.18);
+  ctx.fillStyle='#ffcc90'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.arc(0,-108,22,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle='#ffe0b2'; ctx.fillRect(-18,-86,36,55); ctx.strokeRect(-18,-86,36,55);
+  ctx.restore();
+}
+
+// ── Teacher ──────────────────────────────────────────────────────────────────
+// Teacher stands left-center of blackboard
+const TEACH_X = 430, TEACH_Y = 508;
+
+function drawTeacher() {
+  const tImg = G.tState==='writing' ? IMG.write
+             : G.tState==='warning' ? IMG.warn : IMG.turn;
+  if(tImg.complete && tImg.naturalWidth>0) {
+    const ih=290, iw=ih*(tImg.naturalWidth/tImg.naturalHeight);
+    ctx.drawImage(tImg, TEACH_X-iw/2, TEACH_Y-ih, iw, ih);
+  } else fallbackTeacher();
+
+  // Warning bubble
+  if(G.tState==='warning') {
+    const p=0.85+Math.sin(Date.now()/110)*0.15;
+    ctx.save(); ctx.translate(TEACH_X+50, TEACH_Y-330); ctx.scale(p,p);
+    ctx.fillStyle='#FAF3E3'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.arc(0,0,30,0,Math.PI*2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-9,22); ctx.lineTo(9,22); ctx.lineTo(0,42);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle='#c0392b';
+    ctx.font="bold 40px 'Dokdo',cursive";
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('!',0,-2); ctx.restore();
+  }
+  // Gaze beams when turned
+  if(G.tState==='turned') {
+    ctx.save(); ctx.globalAlpha=0.35+Math.sin(Date.now()/160)*0.2;
+    [-1,1].forEach(s=>{
+      ctx.strokeStyle='rgba(192,57,43,0.3)'; ctx.lineWidth=4;
+      ctx.beginPath();
+      ctx.moveTo(TEACH_X+s*18,TEACH_Y-250);
+      ctx.lineTo(TEACH_X+s*18+s*400,TEACH_Y-210); ctx.stroke();
+    });
+    ctx.restore();
+  }
+}
+function fallbackTeacher() {
+  ctx.save(); ctx.fillStyle='#3d5a99'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+  ctx.fillRect(TEACH_X-20,TEACH_Y-170,40,80); ctx.strokeRect(TEACH_X-20,TEACH_Y-170,40,80);
+  ctx.fillStyle='#ffcc90';
+  ctx.beginPath(); ctx.arc(TEACH_X,TEACH_Y-185,24,0,Math.PI*2); ctx.fill(); ctx.stroke();
+  ctx.restore();
+}
+
+// ── Note Panel ───────────────────────────────────────────────────────────────
+function drawNotePanel() {
+  // Background panel
+  ctx.save();
+  ctx.fillStyle='rgba(250,243,227,0.96)';
+  ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+  const panelH = KEY_IND_Y+KEY_IND_H-NOTE_TOP+26;
+  ctx.fillRect(PANEL_X, NOTE_TOP-18, PANEL_W, panelH);
+  ctx.strokeRect(PANEL_X, NOTE_TOP-18, PANEL_W, panelH);
+
+  // Halftone texture inside
+  ctx.globalAlpha=0.05; ctx.fillStyle='#1A1008';
+  for(let x=PANEL_X;x<PANEL_X+PANEL_W;x+=9)
+    for(let y=NOTE_TOP-18;y<(KEY_IND_Y+KEY_IND_H)+10;y+=9){
+      ctx.beginPath(); ctx.arc(x,y,1.1,0,Math.PI*2); ctx.fill();
+    }
+  ctx.restore();
+
+  // Lane dividers
+  ctx.save(); ctx.strokeStyle='#c8b89a'; ctx.lineWidth=1; ctx.globalAlpha=0.5;
+  for(let i=1;i<4;i++){
+    const lx=PANEL_X+4+LANE_COL_W*i;
+    ctx.beginPath(); ctx.moveTo(lx,NOTE_TOP-14); ctx.lineTo(lx,HIT_Y); ctx.stroke();
+  }
+  ctx.restore();
+
+  // Panel title
+  ctx.save();
+  ctx.font="15px 'Dokdo',cursive"; ctx.fillStyle='#1A1008';
+  ctx.textAlign='center';
+  ctx.fillText('댄스 타이밍', PANEL_X+PANEL_W/2, NOTE_TOP-4);
+  ctx.restore();
+
+  // HIT line
+  ctx.save();
+  ctx.strokeStyle='#c0392b'; ctx.lineWidth=3; ctx.setLineDash([7,4]);
+  ctx.beginPath();
+  ctx.moveTo(PANEL_X, HIT_Y); ctx.lineTo(PANEL_X+PANEL_W, HIT_Y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle='#c0392b'; ctx.font="bold 11px 'Nanum Pen Script',cursive";
+  ctx.textAlign='right';
+  ctx.fillText('HIT', PANEL_X-3, HIT_Y+4);
+  ctx.restore();
+
+  // Key indicators (one per lane)
+  LANE_ORDER.forEach((dir,i)=>{
+    const cx=LANE_X[i];
+    const pressed=isDown(dir);
+    ctx.save();
+    ctx.fillStyle=pressed?DIR_COLOR[dir]:'rgba(250,243,227,0.9)';
+    ctx.strokeStyle='#1A1008'; ctx.lineWidth=2.5;
+    rr(ctx, cx-LANE_COL_W/2+3, KEY_IND_Y, LANE_COL_W-6, KEY_IND_H, 7);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle=pressed?'#FAF3E3':'#1A1008';
+    ctx.font='bold 22px monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(DIR_SYM[dir], cx, KEY_IND_Y+KEY_IND_H/2);
+    ctx.restore();
+  });
+
+  // "SPACE = 앉기" hint at bottom
+  ctx.save();
+  const hy = (KEY_IND_Y+KEY_IND_H)+14;
+  ctx.fillStyle='rgba(250,243,227,0.9)'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=2;
+  ctx.fillRect(PANEL_X,hy,PANEL_W,28); ctx.strokeRect(PANEL_X,hy,PANEL_W,28);
+  ctx.fillStyle='#555'; ctx.font="14px 'Dokdo',cursive";
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  const spaceColor = G.hiding ? '#2980b9' : '#888';
+  ctx.fillStyle=spaceColor;
+  ctx.fillText(G.hiding?'🧑‍🎓 공부하는 척!':'SPACE = 앉기', PANEL_X+PANEL_W/2, hy+14);
+  ctx.restore();
+}
+
+function isDown(dir){
+  const m={left:'ArrowLeft',up:'ArrowUp',down:'ArrowDown',right:'ArrowRight'};
+  return keys.has(m[dir]);
+}
+
+// ── Notes ────────────────────────────────────────────────────────────────────
+function drawNotes() {
+  for(const n of G.notes) {
+    const nx=n.x, ny=n.y, hs=NOTE_SIZE/2;
+    // shadow
+    ctx.save(); ctx.globalAlpha=0.22; ctx.fillStyle='#1A1008';
+    rr(ctx,nx-hs+3,ny-hs+4,NOTE_SIZE,NOTE_SIZE,9); ctx.fill(); ctx.restore();
+    // block
+    ctx.save();
+    ctx.fillStyle=DIR_COLOR[n.dir]; ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+    rr(ctx,nx-hs,ny-hs,NOTE_SIZE,NOTE_SIZE,9);
+    ctx.fill(); ctx.stroke();
+    // symbol
+    ctx.fillStyle='#FAF3E3'; ctx.font='bold 20px monospace';
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(DIR_SYM[n.dir],nx,ny);
+    ctx.restore();
+  }
+}
+
+// ── Hit FX ───────────────────────────────────────────────────────────────────
+function drawHitFx() {
+  for(const h of G.hitFx) {
+    ctx.save(); ctx.globalAlpha=h.life*0.75;
+    if(h.type==='line') {
+      ctx.strokeStyle=h.color; ctx.lineWidth=2.5;
+      ctx.beginPath();
+      ctx.moveTo(h.x,h.y);
+      ctx.lineTo(h.x+Math.cos(h.angle)*h.len*h.life, h.y+Math.sin(h.angle)*h.len*h.life);
+      ctx.stroke();
+    } else {
+      ctx.strokeStyle=h.color; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.arc(h.x,h.y,h.r,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.restore();
+  }
+}
+
+// ── HUD ──────────────────────────────────────────────────────────────────────
+function drawHUD() {
+  // Score/combo/timer box (top-right)
+  ctx.save();
+  ctx.fillStyle='rgba(250,243,227,0.96)'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
+  ctx.fillRect(W-224,16,208,106); ctx.strokeRect(W-224,16,208,106);
+  ctx.fillStyle='#1A1008'; ctx.font="22px 'Dokdo',cursive"; ctx.textAlign='left';
+  ctx.fillText(`점수: ${G.score.toLocaleString()}`, W-214, 46);
+  ctx.fillText(`콤보: ${G.combo}🔥`, W-214, 74);
+  const tR=Math.ceil(G.timer), urgent=tR<=10;
+  ctx.fillStyle=urgent?'#c0392b':'#1A1008';
+  ctx.font=urgent?"bold 22px 'Dokdo',cursive":"22px 'Dokdo',cursive";
+  ctx.fillText(`⏱ ${tR}초`, W-214, 108);
+  ctx.restore();
+
+  // Teacher status bar (top-center)
+  ctx.save();
+  let stTxt='', stCol='';
+  if(G.tState==='writing')    { stTxt='📝 판서 중 — 지금이야!'; stCol='#27ae60'; }
+  else if(G.tState==='warning'){ stTxt='⚠️ 경고! 빨리 앉아!';  stCol='#e67e22'; }
+  else                         { stTxt='👁️ 감시 중! 꼼짝 마!'; stCol='#c0392b'; }
+  ctx.fillStyle='rgba(250,243,227,0.97)'; ctx.strokeStyle='#1A1008'; ctx.lineWidth=2.5;
+  ctx.fillRect(W/2-140,12,280,42); ctx.strokeRect(W/2-140,12,280,42);
+  ctx.fillStyle=stCol; ctx.font="bold 20px 'Black Han Sans','Dokdo',cursive";
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  ctx.fillText(stTxt,W/2,33); ctx.restore();
+
+}
+
+// ── Popups ───────────────────────────────────────────────────────────────────
+function drawPopups() {
+  for(const p of G.popups) {
+    ctx.save(); ctx.globalAlpha=p.life;
+    const sc=1+(1-p.life)*0.4;
+    ctx.translate(p.x, p.y-(1-p.life)*28); ctx.scale(sc,sc);
+    ctx.font="bold 26px 'Dokdo',cursive"; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.strokeStyle='#1A1008'; ctx.lineWidth=4; ctx.strokeText(p.text,0,0);
+    ctx.fillStyle=p.color; ctx.fillText(p.text,0,0); ctx.restore();
+  }
+}
+
+// ── Sparkles ──────────────────────────────────────────────────────────────────
+function drawSparkles() {
+  ctx.save(); ctx.font='18px serif'; ctx.textAlign='center'; ctx.textBaseline='middle';
+  for(const s of G.sparkles) {
+    ctx.globalAlpha=(0.3+Math.sin(s.t)*0.35)*0.7;
+    ctx.fillStyle='#f7b6c4'; ctx.fillText('✦',s.x,s.y);
+  }
+  ctx.restore();
+}
+
+// ── Caught flash ──────────────────────────────────────────────────────────────
+function drawFlash() {
+  G.caughtFlash = Math.max(0, G.caughtFlash-0.025);
+  ctx.save(); ctx.globalAlpha=G.caughtFlash*0.55;
+  ctx.fillStyle='#c0392b'; ctx.fillRect(0,0,W,H); ctx.restore();
+}
+
+// ── Utility ───────────────────────────────────────────────────────────────────
+function rr(c,x,y,w,h,r){
+  c.beginPath(); c.moveTo(x+r,y); c.lineTo(x+w-r,y);
+  c.quadraticCurveTo(x+w,y,x+w,y+r); c.lineTo(x+w,y+h-r);
+  c.quadraticCurveTo(x+w,y+h,x+w-r,y+h); c.lineTo(x+r,y+h);
+  c.quadraticCurveTo(x,y+h,x,y+h-r); c.lineTo(x,y+r);
+  c.quadraticCurveTo(x,y,x+r,y); c.closePath();
+}
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+document.getElementById('btn-start').onclick = startGame;
+document.getElementById('btn-retry').onclick = () => {
+  document.getElementById('gameover-screen').classList.remove('active'); startGame();
+};
+document.getElementById('btn-record').onclick = () => {
+  document.getElementById('name-wrap').classList.add('show');
+  document.getElementById('btn-record').style.display='none';
+  document.getElementById('btn-submit').style.display='';
+  document.getElementById('name-input').focus();
+};
+document.getElementById('btn-submit').onclick = saveScore;
+document.getElementById('name-input').addEventListener('keydown',e=>{ if(e.key==='Enter') saveScore(); });
+
+function startGame() {
+  initState(); G.phase='playing';
+  document.getElementById('intro-screen').classList.remove('active');
+  document.getElementById('gameover-screen').classList.remove('active');
+  document.getElementById('top-btns').classList.add('visible');
+}
+function saveScore() {
+  const name=document.getElementById('name-input').value.trim()||'익명';
+  const d=new Date();
+  const date=`${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}`;
+  try{
+    const sc=JSON.parse(localStorage.getItem('dance_scores')||'[]');
+    sc.push({name,score:G.score,date}); sc.sort((a,b)=>b.score-a.score);
+    localStorage.setItem('dance_scores',JSON.stringify(sc.slice(0,10)));
+    window.parent.postMessage({type:'danceScoreAdded'},'*');
+  }catch(e){}
+  document.getElementById('name-wrap').classList.remove('show');
+  document.getElementById('btn-submit').style.display='none';
+  document.getElementById('go-score').textContent+='  ✅ 기록 저장!';
+}
+
+// ── Boot ──────────────────────────────────────────────────────────────────────
+initState();
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
