@@ -1,4 +1,4 @@
-import { createElement, useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './App.css'
 import { fetchAllTopScores, submitScore, type GameKey, type ScoreRecord } from './lib/scores'
 import { isSupabaseConfigured, supabase } from './lib/supabase'
@@ -30,16 +30,29 @@ const emptyScoreRecords: Record<GameKey, ScoreRecord[]> = {
   'lunch-run': [],
 }
 
+const CHAR_FRAMES = [
+  { src: '/characters/main_1.png', duration: 2000 },
+  { src: '/characters/main_2.png', duration: 700 },
+  { src: '/characters/main_3.png', duration: 350 },
+  { src: '/characters/main_4.png', duration: 600 },
+]
+
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
-  const [showGame, setShowGame] = useState<null | 'lunch' | 'dance'>(null)
+  const [showGame, setShowGame] = useState<null | 'oneLine' | 'lunch' | 'dance'>(null)
   const [scoreRecords, setScoreRecords] = useState(emptyScoreRecords)
+  const [charFrame, setCharFrame] = useState(0)
 
   const refreshScores = useCallback(async () => {
     if (!isSupabaseConfigured) return
     setScoreRecords(await fetchAllTopScores())
   }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => setCharFrame(f => (f + 1) % CHAR_FRAMES.length), CHAR_FRAMES[charFrame].duration)
+    return () => clearTimeout(t)
+  }, [charFrame])
 
   useEffect(() => {
     const loadTimer = window.setTimeout(() => {
@@ -86,25 +99,10 @@ export default function App() {
     const observer = new ResizeObserver(scaleCanvas)
     observer.observe(heroFrame)
 
-    const slot = document.getElementById('hero-character') as HTMLElement
-    const ph = document.getElementById('char-ph') as HTMLElement
-    let placeholderObserver: MutationObserver | undefined
-    if (slot && ph) {
-      const syncPlaceholder = () => {
-        const filled = slot.hasAttribute('filled') ||
-          slot.hasAttribute('src') ||
-          !!slot.querySelector('img') ||
-          getComputedStyle(slot).backgroundImage !== 'none'
-        ph.style.display = filled ? 'none' : 'grid'
-      }
-      setTimeout(syncPlaceholder, 200)
-      placeholderObserver = new MutationObserver(syncPlaceholder)
-      placeholderObserver.observe(slot, { attributes: true, childList: true, subtree: true })
-    }
-
     const rowCleanups: Array<() => void> = []
     document.querySelectorAll<HTMLElement>('.row').forEach(r => {
       const onClick = () => {
+        if (r.dataset.game === 'hanbutgrigi') { setShowGame('oneLine'); return; }
         if (r.dataset.game === 'unicycle') { setShowGame('lunch'); return; }
         if (r.dataset.game === 'lovebeat') { setShowGame('dance'); return; }
         const burst = document.createElement('div')
@@ -125,7 +123,6 @@ export default function App() {
 
     return () => {
       observer.disconnect()
-      placeholderObserver?.disconnect()
       rowCleanups.forEach(cleanup => cleanup())
     }
   }, [])
@@ -140,6 +137,17 @@ export default function App() {
         </div>
 
         <div className="hero-frame" ref={heroFrameRef}>
+          {showGame === 'oneLine' && (
+            <iframe
+              src="/games/one-line.html"
+              style={{
+                position: 'absolute', inset: 0, zIndex: 100,
+                width: '100%', height: '100%', border: 'none',
+              }}
+              title="칠판 낙서 왕"
+              allowFullScreen
+            />
+          )}
           {showGame === 'lunch' && (
             <iframe
               src="/games/lunch-run.html"
@@ -194,12 +202,10 @@ export default function App() {
             <div className="doodle" style={{ left: '30px', top: '24px', fontSize: '54px' }}>★</div>
             <div className="doodle pink" style={{ left: '84px', top: '36px', fontSize: '34px', transform: 'rotate(20deg)' }}>♡</div>
             <div className="doodle yellow twinkle" style={{ left: '140px', top: '90px', fontSize: '30px' }}>✦</div>
-            <div className="doodle" style={{ left: '50px', top: '160px', fontSize: '28px' }}>→</div>
             <div className="doodle blue" style={{ right: '54px', top: '60px', fontSize: '50px', transform: 'rotate(-12deg)' }}>☀</div>
             <div className="doodle pink twinkle d2" style={{ right: '170px', top: '42px', fontSize: '34px' }}>✦</div>
             <div className="doodle" style={{ right: '120px', top: '120px', fontSize: '30px', transform: 'rotate(15deg)' }}>♡</div>
             <div className="doodle pink" style={{ right: '48px', top: '780px', fontSize: '38px', fontFamily: "'Nanum Pen Script',cursive", transform: 'rotate(-6deg)' }}>선생님 몰래!</div>
-            <div className="doodle" style={{ right: '80px', top: '740px', fontSize: '34px', fontFamily: "'Dokdo',cursive", transform: 'rotate(8deg)' }}>↓</div>
             <div className="doodle yellow" style={{ left: '780px', top: '36px', fontSize: '40px', transform: 'rotate(-10deg)' }}>✦</div>
 
             <div className="title-wrap">
@@ -219,7 +225,6 @@ export default function App() {
                 <div className="dash">—</div>
                 <div>
                   <span className="name">칠판 낙서 왕</span>
-                  <span className="note">(분필 금지)</span>
                 </div>
               </div>
               <div className="row" data-game="lovebeat">
@@ -227,8 +232,7 @@ export default function App() {
                 <div className="num">2교시</div>
                 <div className="dash">—</div>
                 <div>
-                  <span className="name">선생님 몰래</span>
-                  <span className="note">춤추기 ♪♪</span>
+                  <span className="name">선생님 몰래 춤추기</span>
                 </div>
               </div>
               <div className="row" data-game="unicycle">
@@ -237,34 +241,29 @@ export default function App() {
                 <div className="dash">—</div>
                 <div>
                   <span className="name">급식 RUN!</span>
-                  <span className="note">먼저 도착!</span>
                 </div>
               </div>
             </div>
 
-            <div className="doodle" style={{ left: '760px', bottom: '30px', fontSize: '28px', transform: 'rotate(-2deg)' }}>→ → →</div>
 
             <div className="stamp">검 인<span>校長</span></div>
 
+            <div className="chalk-scene-doodles">
+              <span style={{ left: '1100px', top: '310px', fontSize: '52px', animationDelay: '0.2s' }}>♡</span>
+              <span style={{ left: '1260px', top: '240px', fontSize: '44px', animationDelay: '0.5s' }}>★</span>
+              <span style={{ left: '1440px', top: '295px', fontSize: '56px', animationDelay: '0.8s' }}>✦</span>
+              <span style={{ left: '1090px', top: '465px', fontSize: '40px', animationDelay: '1.1s' }}>♪</span>
+              <span style={{ left: '1370px', top: '515px', fontSize: '48px', animationDelay: '1.4s' }}>♡</span>
+              <span style={{ left: '1160px', top: '590px', fontSize: '48px', animationDelay: '1.7s' }}>✧</span>
+            </div>
+
             <div className="char-zone">
-              {createElement('image-slot', {
-                className: 'char',
-                id: 'hero-character',
-                shape: 'rect',
-                fit: 'contain',
-                placeholder: '여기에 SD 치비 캐릭터 드롭',
-                src: '/characters/character.png',
-              })}
-              <div className="char-placeholder" id="char-ph">
-                <div className="char-card">
-                  <div className="tag">MAIN CHARACTER</div>
-                  <div className="who">우당탕<br />주인공</div>
-                </div>
-              </div>
-              <div className="char-profile">
-                <strong>아라</strong>
-                <span>밝고 명량한 트러블 메이커</span>
-              </div>
+              <img
+                key={charFrame}
+                src={CHAR_FRAMES[charFrame].src}
+                className={`char-anim${charFrame === 3 ? ' char-anim--exit' : ''}`}
+                alt=""
+              />
               <div className="char-shadow"></div>
             </div>
           </div>
