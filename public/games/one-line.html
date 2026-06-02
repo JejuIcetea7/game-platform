@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>칠판 낙서 왕</title>
+<link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Jua&family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1008; user-select: none; }
+body { font-family: 'Jua', system-ui, sans-serif; color: #f4efe2; }
+#wrap {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background:
+    radial-gradient(ellipse at 50% 100%, rgba(255,224,132,.18), transparent 48%),
+    repeating-linear-gradient(90deg, #86532f 0 34px, #6d4022 34px 38px, #9a6338 38px 70px),
+    #7a4b2a;
+}
+#board {
+  position: absolute;
+  inset: 42px 44px 38px;
+  overflow: hidden;
+  border: 20px solid #7a4b2a;
+  border-radius: 14px;
+  background:
+    linear-gradient(115deg, rgba(255,255,255,.07), transparent 22%, rgba(0,0,0,.12) 54%, transparent 80%),
+    radial-gradient(ellipse at 22% 15%, rgba(255,255,255,.14), transparent 34%),
+    radial-gradient(ellipse at 78% 72%, rgba(0,0,0,.26), transparent 48%),
+    repeating-linear-gradient(0deg, rgba(255,255,255,.026) 0 1px, transparent 1px 7px),
+    repeating-linear-gradient(90deg, rgba(0,0,0,.04) 0 1px, transparent 1px 11px),
+    #214231;
+  box-shadow:
+    0 0 0 7px #3a220f,
+    0 0 0 12px #9a6338,
+    inset 0 0 0 4px #1a1008,
+    inset 0 0 120px rgba(0,0,0,.55),
+    inset 0 0 24px rgba(255,255,255,.07),
+    0 16px 0 #52311a,
+    0 26px 34px rgba(26,16,8,.45);
+}
+#board::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: .55;
+  background-image:
+    radial-gradient(circle at 12% 18%, rgba(244,239,226,.30) 0 1px, transparent 2px),
+    radial-gradient(circle at 45% 54%, rgba(244,239,226,.20) 0 1px, transparent 2px),
+    radial-gradient(circle at 82% 31%, rgba(244,239,226,.18) 0 1px, transparent 2px),
+    linear-gradient(100deg, transparent 0 30%, rgba(255,255,255,.035) 32%, transparent 38% 100%);
+  background-size: 72px 58px, 96px 88px, 120px 84px, 100% 100%;
+}
+#board::after {
+  content: "";
+  position: absolute;
+  left: 28px;
+  right: 28px;
+  bottom: 8px;
+  height: 16px;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 18% 50%, rgba(244,239,226,.55), transparent 13%),
+    radial-gradient(ellipse at 41% 42%, rgba(241,222,122,.42), transparent 12%),
+    radial-gradient(ellipse at 72% 48%, rgba(166,201,226,.34), transparent 11%),
+    linear-gradient(90deg, transparent, rgba(244,239,226,.22), transparent);
+  filter: blur(2px);
+  opacity: .78;
+}
+#game {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg transform='rotate(-32 32 32)'%3E%3Crect x='25' y='6' width='17' height='48' rx='5' fill='%23f4efe2' stroke='%231a1008' stroke-width='3'/%3E%3Crect x='27.5' y='9' width='12' height='12' rx='3' fill='%23f1de7a' opacity='.92'/%3E%3Cpath d='M26 47h16l-4 9h-8z' fill='%23d8cfb7' stroke='%231a1008' stroke-width='2'/%3E%3C/g%3E%3Ccircle cx='13' cy='51' r='3.2' fill='%23f1de7a' opacity='.72'/%3E%3Ccircle cx='21' cy='57' r='2.2' fill='%23f4efe2' opacity='.82'/%3E%3Ccircle cx='10' cy='58' r='1.5' fill='%23f1de7a' opacity='.55'/%3E%3C/svg%3E") 16 52, crosshair;
+}
+.top-btn {
+  position: absolute;
+  top: 16px;
+  z-index: 5;
+  border: 4px solid #1a1008;
+  background: linear-gradient(180deg, #fff9ee, #eadfc7);
+  color: #1a1008;
+  box-shadow: 5px 5px 0 #1a1008;
+  padding: 14px 24px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 24px;
+  cursor: pointer;
+}
+.top-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1a1008; }
+#btn-home { left: 18px; }
+#btn-undo { right: 188px; }
+#btn-restart { right: 18px; }
+#timer {
+  position: absolute;
+  top: 14px;
+  right: 436px;
+  z-index: 5;
+  min-width: 190px;
+  padding: 12px 24px 11px;
+  border: 5px solid rgba(244,239,226,.86);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(241,222,122,.16), transparent 68%),
+    rgba(26,16,8,.34);
+  color: #f1de7a;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 34px;
+  line-height: 1;
+  text-align: center;
+  text-shadow:
+    3px 3px 0 rgba(26,16,8,.72),
+    0 0 18px rgba(241,222,122,.55);
+  box-shadow:
+    inset 0 0 24px rgba(0,0,0,.38),
+    0 0 24px rgba(241,222,122,.18),
+    5px 5px 0 rgba(26,16,8,.55);
+}
+#stage {
+  position: absolute;
+  left: 46px;
+  bottom: 34px;
+  z-index: 5;
+  font-family: 'Nanum Pen Script', cursive;
+  font-size: 32px;
+  color: rgba(244,239,226,.84);
+  transform: rotate(-2deg);
+}
+#message {
+  position: absolute;
+  left: 50%;
+  bottom: 42px;
+  z-index: 5;
+  transform: translateX(-50%);
+  padding: 10px 22px;
+  border: 2px dashed rgba(244,239,226,.7);
+  background: rgba(26,16,8,.24);
+  color: #f4efe2;
+  font-size: 20px;
+  white-space: nowrap;
+  box-shadow: inset 0 0 18px rgba(0,0,0,.2);
+}
+#message.warn { color: #f7b6c4; }
+#message.clear { color: #f1de7a; }
+#message.fail { color: #ff8f8f; }
+#intro {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(250,243,227,.96);
+  color: #1a1008;
+}
+#intro.hidden { display: none; }
+.intro-card {
+  width: min(680px, 86%);
+  border: 4px solid #1a1008;
+  background: #faf3e3;
+  box-shadow: 8px 8px 0 #1a1008;
+  padding: 34px 44px;
+  text-align: center;
+}
+.intro-card h1 {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 50px;
+  line-height: 1.05;
+  text-shadow: 3px 3px 0 #f1de7a;
+  margin-bottom: 12px;
+}
+.intro-card p {
+  font-size: 20px;
+  line-height: 1.75;
+  margin-bottom: 22px;
+}
+#btn-start {
+  border: 0;
+  background: #1a1008;
+  color: #faf3e3;
+  box-shadow: 5px 5px 0 #c8362c;
+  padding: 13px 50px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 26px;
+  cursor: pointer;
+}
+</style>
+</head>
+<body>
+<div id="wrap">
+  <div id="board">
+    <button class="top-btn" id="btn-home">← 메인화면</button>
+    <div id="timer">00.00초</div>
+    <button class="top-btn" id="btn-undo">되돌리기</button>
+    <button class="top-btn" id="btn-restart">재시작</button>
+    <canvas id="game"></canvas>
+    <div id="stage">1교시 칠판 낙서 왕</div>
+    <div id="message">노란 시작점을 클릭하세요.</div>
+  </div>
+  <div id="intro">
+    <div class="intro-card">
+      <h1>칠판 낙서 왕</h1>
+      <p>
+        7개의 칠판 낙서를 쉬운 것부터 어려운 것까지 완성하세요.<br>
+        모든 하얀 선을 정확히 한 번씩 지나가세요.<br>
+        꼭짓점은 다시 방문할 수 있지만, 이미 쓴 선은 다시 쓸 수 없어요.<br>
+        막다른 곳에 갔는데 남은 선이 있으면 실패입니다.
+      </p>
+      <button id="btn-start">게임 시작!</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+const board = document.getElementById('board');
+const timerEl = document.getElementById('timer');
+const messageEl = document.getElementById('message');
+const intro = document.getElementById('intro');
+const stageEl = document.getElementById('stage');
+
+const W = 1280;
+const H = 720;
+canvas.width = W;
+canvas.height = H;
+
+const levels = [
+  {
+    name: '첫 낙서',
+    nodes: [
+      { id: 0, x: 390, y: 500 },
+      { id: 1, x: 390, y: 250 },
+      { id: 2, x: 640, y: 170 },
+      { id: 3, x: 890, y: 250 },
+      { id: 4, x: 890, y: 500 },
+    ],
+    edges: [
+      { id: 0, from: 0, to: 1 },
+      { id: 1, from: 1, to: 2 },
+      { id: 2, from: 2, to: 3 },
+      { id: 3, from: 3, to: 4 },
+      { id: 4, from: 4, to: 0 },
+      { id: 5, from: 1, to: 3 },
+    ],
+    startNode: null,
+    endNode: null,
+  },
+  {
+    name: '대각선 네모',
+    nodes: [
+      { id: 0, x: 410, y: 220 },
+      { id: 1, x: 870, y: 220 },
+      { id: 2, x: 870, y: 500 },
+      { id: 3, x: 410, y: 500 },
+      { id: 4, x: 640, y: 360 },
+    ],
+    edges: [
+      { id: 0, from: 0, to: 1 },
+      { id: 1, from: 1, to: 2 },
+      { id: 2, from: 2, to: 3 },
+      { id: 3, from: 3, to: 0 },
+      { id: 4, from: 0, to: 4 },
+      { id: 5, from: 4, to: 2 },
+      { id: 6, from: 1, to: 4 },
+      { id: 7, from: 4, to: 3 },
+      { id: 8, from: 0, to: 2 },
+    ],
+    startNode: null,
+    endNode: null,
+  },
+  {
+    name: '꼬인 집',
+    nodes: [
+      { id: 0, x: 400, y: 500 },
+      { id: 1, x: 400, y: 280 },
+      { id: 2, x: 640, y: 130 },
+      { id: 3, x: 880, y: 280 },
+      { id: 4, x: 880, y: 500 },
+      { id: 5, x: 640, y: 560 },
+    ],
+    edges: [
+      { id: 0, from: 0, to: 1 },
+      { id: 1, from: 1, to: 2 },
+      { id: 2, from: 2, to: 3 },
+      { id: 3, from: 3, to: 4 },
+      { id: 4, from: 4, to: 0 },
+      { id: 5, from: 1, to: 3 },
+      { id: 6, from: 0, to: 2 },
+      { id: 7, from: 2, to: 4 },
+      { id: 8, from: 0, to: 5 },
+      { id: 9, from: 5, to: 4 },
+    ],
+    startNode: null,
+    endNode: null,
+  },
+  {
+    name: '나비 매듭',
+    nodes: [
+      { id: 0, x: 350, y: 350 },
+      { id: 1, x: 520, y: 180 },
+      { id: 2, x: 650, y: 350 },
+      { id: 3, x: 780, y: 520 },
+      { id: 4, x: 950, y: 350 },
+      { id: 5, x: 650, y: 520 },
+    ],
+    edges: [
+      { id: 0, from: 0, to: 1 },
+      { id: 1, from: 1, to: 2 },
+      { id: 2, from: 2, to: 0 },
+      { id: 3, from: 2, to: 3 },
+      { id: 4, from: 3, to: 4 },
+      { id: 5, from: 4, to: 2 },
+      { id: 6, from: 0, to: 5 },
+      { id: 7, from: 5, to: 4 },
+      { id: 8, from: 1, to: 5 },
+      { id: 9, from: 5, to: 3 },
+      { id: 10, from: 0, to: 4 },
+    ],
+    startNode: null,
+    endNode: null,
+  },
+  {
+    name: '별표 낙서',
+    nodes: [
+      { id: 0, x: 330, y: 470 },
+      { id: 1, x: 330, y: 230 },
+      { id: 2, x: 640, y: 120 },
+      { id: 3, x: 970, y: 230 },
+      { id: 4, x: 970, y: 470 },
+      { id: 5, x: 640, y: 380 },
+    ],
+    edges: [
+      { id: 0, from: 0, to: 1 },
+      { id: 1, from: 1, to: 2 },
+      { id: 2, from: 2, to: 3 },
+      { id: 3, from: 3, to: 4 },
+      { id: 4, from: 4, to: 0 },
+      { id: 5, from: 1, to: 3 },
+      { id: 6, from: 0, to: 5 },
+      { id: 7, from: 5, to: 4 },
+      { id: 8, from: 1, to: 5 },
+      { id: 9, from: 5, to: 3 },
+      { id: 10, from: 2, to: 5 },
+      { id: 11, from: 0, to: 2 },
+    ],
+    startNode: null,
+    endNode: null,
+  },
+  {
+    name: '격자 함정',
+    nodes: [
+      { id: 0, x: 360, y: 220 },
+      { id: 1, x: 640, y: 220 },
+      { id: 2, x: 920, y: 220 },
+      { id: 3, x: 360, y: 500 },
+      { id: 4, x: 640, y: 500 },
+      { id: 5, x: 920, y: 500 },
+      { id: 6, x: 640, y: 360 },
+    ],
+    edges: [
+      { id: 0, from: 0, to: 1 },
+      { id: 1, from: 1, to: 2 },
+      { id: 2, from: 3, to: 4 },
+      { id: 3, from: 4, to: 5 },
+      { id: 4, from: 0, to: 3 },
+      { id: 5, from: 1, to: 4 },
+      { id: 6, from: 2, to: 5 },
+      { id: 7, from: 0, to: 4 },
+      { id: 8, from: 1, to: 3 },
+      { id: 9, from: 1, to: 6 },
+      { id: 10, from: 6, to: 4 },
+      { id: 11, from: 3, to: 6 },
+      { id: 12, from: 6, to: 5 },
+      { id: 13, from: 0, to: 5 },
+    ],
+    startNode: null,
+    endNode: null,
+  },
+  {
+    name: '마지막 칠판 별',
+    nodes: [
+      { id: 0, x: 640, y: 110 },
+      { id: 1, x: 840, y: 190 },
+      { id: 2, x: 980, y: 360 },
+      { id: 3, x: 840, y: 530 },
+      { id: 4, x: 640, y: 610 },
+      { id: 5, x: 440, y: 530 },
+      { id: 6, x: 300, y: 360 },
+      { id: 7, x: 440, y: 190 },
+      { id: 8, x: 640, y: 360 },
+    ],
+    edges: [
+      { id: 0, from: 0, to: 1 },
+      { id: 1, from: 1, to: 2 },
+      { id: 2, from: 2, to: 3 },
+      { id: 3, from: 3, to: 4 },
+      { id: 4, from: 4, to: 5 },
+      { id: 5, from: 5, to: 6 },
+      { id: 6, from: 6, to: 7 },
+      { id: 7, from: 7, to: 0 },
+      { id: 8, from: 0, to: 4 },
+      { id: 9, from: 4, to: 2 },
+      { id: 10, from: 2, to: 6 },
+      { id: 11, from: 6, to: 0 },
+      { id: 12, from: 1, to: 8 },
+      { id: 13, from: 8, to: 5 },
+      { id: 14, from: 7, to: 8 },
+      { id: 15, from: 8, to: 3 },
+      { id: 16, from: 1, to: 3 },
+      { id: 17, from: 5, to: 7 },
+    ],
+    startNode: null,
+    endNode: null,
+  },
+];
+
+let currentLevelIndex = 0;
+let level = levels[currentLevelIndex];
+let levelInfo = null;
+let edgeTexture = new Map();
+let gameState = 'IDLE';
+let currentNode = null;
+let usedEdges = new Set();
+let path = [];
+let pointer = null;
+let isPointerDown = false;
+let startTime = 0;
+let elapsed = 0;
+let raf = 0;
+let particles = [];
+
+function validateLevel(data) {
+  const degree = new Map(data.nodes.map(node => [node.id, 0]));
+  data.edges.forEach(edge => {
+    degree.set(edge.from, degree.get(edge.from) + 1);
+    degree.set(edge.to, degree.get(edge.to) + 1);
+  });
+  const oddNodes = [...degree.entries()].filter(([, count]) => count % 2 === 1).map(([id]) => id);
+  if (oddNodes.length !== 0 && oddNodes.length !== 2) {
+    throw new Error('Invalid one-line level: odd-degree node count must be 0 or 2.');
+  }
+  return { degree, oddNodes };
+}
+
+levels.forEach(validateLevel);
+
+function buildEdgeTexture(data) {
+  return new Map(data.edges.map(edge => [
+    edge.id,
+    Array.from({ length: 18 }, (_, index) => ({
+      t: (index + 0.5) / 18,
+      off: ((index * 37 + edge.id * 13) % 11) - 5,
+      size: 1.2 + ((index * 19 + edge.id * 7) % 5) * 0.45,
+      alpha: 0.16 + ((index * 23 + edge.id * 5) % 5) * 0.05,
+    })),
+  ]));
+}
+
+function loadStage(index, resetClock = false) {
+  currentLevelIndex = index;
+  level = levels[currentLevelIndex];
+  levelInfo = validateLevel(level);
+  edgeTexture = buildEdgeTexture(level);
+  gameState = 'IDLE';
+  currentNode = null;
+  usedEdges = new Set();
+  path = [];
+  particles = [];
+  pointer = null;
+  isPointerDown = false;
+  if (resetClock) {
+    startTime = 0;
+    elapsed = 0;
+    timerEl.textContent = '00.00초';
+  }
+  stageEl.textContent = `${currentLevelIndex + 1}/${levels.length}단계 · ${level.name}`;
+  setMessage('노란 시작점을 클릭하세요.');
+  draw();
+}
+
+function allowedStartNodes() {
+  if (level.startNode !== null) return [level.startNode];
+  if (levelInfo.oddNodes.length === 2) return levelInfo.oddNodes;
+  return level.nodes.map(node => node.id);
+}
+
+function resize() {
+  const scale = Math.min(board.clientWidth / W, board.clientHeight / H);
+  canvas.style.width = `${W * scale}px`;
+  canvas.style.height = `${H * scale}px`;
+  canvas.style.left = `${(board.clientWidth - W * scale) / 2}px`;
+  canvas.style.top = `${(board.clientHeight - H * scale) / 2}px`;
+}
+
+function nodeById(id) {
+  return level.nodes.find(node => node.id === id);
+}
+
+function edgeBetween(a, b) {
+  return level.edges.find(edge => (edge.from === a && edge.to === b) || (edge.from === b && edge.to === a));
+}
+
+function unusedEdgesFrom(nodeId) {
+  return level.edges.filter(edge => !usedEdges.has(edge.id) && (edge.from === nodeId || edge.to === nodeId));
+}
+
+function neighbors(nodeId) {
+  return unusedEdgesFrom(nodeId).map(edge => edge.from === nodeId ? edge.to : edge.from);
+}
+
+function usedEdgeCountForNode(nodeId) {
+  return path.reduce((count, move) => count + (move.from === nodeId || move.to === nodeId ? 1 : 0), 0);
+}
+
+function getPos(event) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (event.clientX - rect.left) * (W / rect.width),
+    y: (event.clientY - rect.top) * (H / rect.height),
+  };
+}
+
+function nearestNode(pos, limit = 36) {
+  let best = null;
+  let bestDist = limit;
+  level.nodes.forEach(node => {
+    const dist = Math.hypot(pos.x - node.x, pos.y - node.y);
+    if (dist < bestDist) {
+      best = node.id;
+      bestDist = dist;
+    }
+  });
+  return best;
+}
+
+function setMessage(text, type = '') {
+  messageEl.textContent = text;
+  messageEl.className = type;
+}
+
+function startTimer() {
+  if (startTime) return;
+  startTime = performance.now();
+}
+
+function updateTimer() {
+  if (gameState === 'PLAYING' && startTime) {
+    elapsed = (performance.now() - startTime) / 1000;
+    timerEl.textContent = `${elapsed.toFixed(2).padStart(5, '0')}초`;
+  }
+  if (particles.length > 0 || (gameState === 'PLAYING' && isPointerDown)) draw();
+  raf = requestAnimationFrame(updateTimer);
+}
+
+function resetGame() {
+  loadStage(0, true);
+}
+
+function checkTerminalState() {
+  if (usedEdges.size === level.edges.length) {
+    isPointerDown = false;
+    pointer = null;
+    burstAtNode(currentNode, '#f1de7a', 56);
+    if (currentLevelIndex === levels.length - 1) {
+      gameState = 'SUCCESS';
+      setMessage(`ALL CLEAR! 7단계 완성 - ${elapsed.toFixed(2)}초`, 'clear');
+    } else {
+      gameState = 'STAGE_CLEAR';
+      setMessage(`${currentLevelIndex + 1}단계 CLEAR! 다음 낙서로 넘어갑니다.`, 'clear');
+      setTimeout(() => {
+        if (gameState === 'STAGE_CLEAR') loadStage(currentLevelIndex + 1);
+      }, 950);
+    }
+    draw();
+    return;
+  }
+
+  if (currentNode !== null && unusedEdgesFrom(currentNode).length === 0) {
+    gameState = 'FAIL';
+    isPointerDown = false;
+    pointer = null;
+    burstAtNode(currentNode, '#f7b6c4', 34);
+    setMessage('FAIL! 현재 노드에서 갈 수 있는 미사용 선이 없습니다.', 'fail');
+    draw();
+  }
+}
+
+function beginAt(nodeId) {
+  if (!allowedStartNodes().includes(nodeId)) {
+    setMessage('이 레벨은 노란 시작점에서만 시작할 수 있어요.', 'warn');
+    draw();
+    return;
+  }
+  gameState = 'PLAYING';
+  currentNode = nodeId;
+  startTimer();
+  setMessage('현재 노드와 연결된 미사용 선만 선택하세요.');
+  draw();
+}
+
+function moveTo(nextNode) {
+  if (gameState !== 'PLAYING' || currentNode === null || nextNode === currentNode) return;
+
+  const edge = edgeBetween(currentNode, nextNode);
+  if (!edge) {
+    setMessage('인접 노드로만 이동할 수 있어요.', 'warn');
+    return;
+  }
+  if (usedEdges.has(edge.id)) {
+    setMessage('이미 사용한 간선은 무시됩니다.', 'warn');
+    return;
+  }
+
+  usedEdges.add(edge.id);
+  path.push({ edgeId: edge.id, from: currentNode, to: nextNode });
+  scatterAlongEdge(edge, 24);
+  currentNode = nextNode;
+  setMessage(`${usedEdges.size} / ${level.edges.length} 간선 사용`);
+  checkTerminalState();
+  draw();
+}
+
+function undoMove() {
+  if (gameState === 'STAGE_CLEAR' || gameState === 'SUCCESS') {
+    setMessage('이미 클리어한 낙서는 되돌릴 수 없어요.', 'warn');
+    return;
+  }
+  if (path.length === 0) {
+    setMessage('되돌릴 이동이 없습니다.', 'warn');
+    return;
+  }
+  const last = path.pop();
+  usedEdges.delete(last.edgeId);
+  currentNode = last.from;
+  gameState = 'PLAYING';
+  setMessage(`되돌림: ${usedEdges.size} / ${level.edges.length} 간선 사용`);
+  draw();
+}
+
+function spawnParticle(x, y, color, power = 1) {
+  particles.push({
+    x,
+    y,
+    vx: (Math.random() - 0.5) * 2.4 * power,
+    vy: (Math.random() - 0.5) * 2.0 * power - 0.2,
+    life: 24 + Math.random() * 22,
+    maxLife: 46,
+    size: 1.5 + Math.random() * 4,
+    color,
+  });
+}
+
+function scatterAlongEdge(edge, count) {
+  const from = nodeById(edge.from);
+  const to = nodeById(edge.to);
+  for (let i = 0; i < count; i++) {
+    const t = Math.random();
+    const x = from.x + (to.x - from.x) * t + (Math.random() - 0.5) * 18;
+    const y = from.y + (to.y - from.y) * t + (Math.random() - 0.5) * 18;
+    spawnParticle(x, y, '#f1de7a', 1.15);
+  }
+}
+
+function burstAtNode(nodeId, color, count) {
+  const node = nodeById(nodeId);
+  if (!node) return;
+  for (let i = 0; i < count; i++) {
+    spawnParticle(node.x + (Math.random() - 0.5) * 28, node.y + (Math.random() - 0.5) * 28, color, 2.2);
+  }
+}
+
+function updateParticles() {
+  particles = particles
+    .map(p => ({
+      ...p,
+      x: p.x + p.vx,
+      y: p.y + p.vy,
+      vy: p.vy + 0.035,
+      vx: p.vx * 0.985,
+      life: p.life - 1,
+    }))
+    .filter(p => p.life > 0);
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, p.life / p.maxLife) * 0.85;
+    ctx.fillStyle = p.color;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+function chalkLine(edge, color, width, alpha) {
+  const from = nodeById(edge.from);
+  const to = nodeById(edge.to);
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const length = Math.hypot(dx, dy) || 1;
+  const nx = -dy / length;
+  const ny = dx / length;
+
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width + i * 0.9;
+    const off = (i - 1.5) * 1.9;
+    ctx.moveTo(from.x + nx * off, from.y + ny * off);
+    ctx.lineTo(to.x + nx * off, to.y + ny * off);
+    ctx.stroke();
+  }
+  edgeTexture.get(edge.id).forEach(dot => {
+    ctx.globalAlpha = dot.alpha * alpha;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(
+      from.x + dx * dot.t + nx * dot.off,
+      from.y + dy * dot.t + ny * dot.off,
+      dot.size,
+      0,
+      Math.PI * 2
+    );
+    ctx.fill();
+  });
+  ctx.restore();
+}
+
+function draw() {
+  ctx.clearRect(0, 0, W, H);
+  updateParticles();
+
+  level.edges.forEach(edge => {
+    const used = usedEdges.has(edge.id);
+    chalkLine(edge, used ? '#f1de7a' : '#f4efe2', used ? 8 : 5, used ? 0.98 : 0.72);
+  });
+
+  if (gameState === 'PLAYING' && isPointerDown && currentNode !== null && pointer) {
+    const node = nodeById(currentNode);
+    ctx.save();
+    ctx.strokeStyle = 'rgba(241,222,122,.5)';
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.setLineDash([9, 12]);
+    ctx.beginPath();
+    ctx.moveTo(node.x, node.y);
+    ctx.lineTo(pointer.x, pointer.y);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  const startNodes = allowedStartNodes();
+  level.nodes.forEach(node => {
+    const isCurrent = node.id === currentNode;
+    const isStartCandidate = gameState === 'IDLE' && startNodes.includes(node.id);
+    const isVisited = usedEdgeCountForNode(node.id) > 0;
+    ctx.save();
+    ctx.beginPath();
+    ctx.fillStyle = isCurrent || isStartCandidate ? '#f1de7a' : isVisited ? '#a6c9e2' : '#f4efe2';
+    ctx.strokeStyle = '#1a1008';
+    ctx.lineWidth = 4;
+    ctx.shadowColor = isCurrent || isStartCandidate ? 'rgba(241,222,122,.9)' : 'rgba(244,239,226,.28)';
+    ctx.shadowBlur = isCurrent || isStartCandidate ? 18 : 7;
+    ctx.arc(node.x, node.y, isCurrent ? 17 : isStartCandidate ? 15 : 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  });
+
+  drawParticles();
+}
+
+canvas.addEventListener('pointerdown', event => {
+  if (gameState === 'SUCCESS' || gameState === 'STAGE_CLEAR' || gameState === 'FAIL') return;
+  const pos = getPos(event);
+  const targetNode = nearestNode(pos);
+  if (targetNode === null) return;
+
+  canvas.setPointerCapture(event.pointerId);
+  isPointerDown = true;
+  pointer = pos;
+
+  if (gameState === 'IDLE') beginAt(targetNode);
+  else moveTo(targetNode);
+});
+
+canvas.addEventListener('pointermove', event => {
+  if (gameState !== 'PLAYING' || !isPointerDown) return;
+  pointer = getPos(event);
+  if (Math.random() < 0.35) spawnParticle(pointer.x, pointer.y, '#f1de7a', 0.75);
+  const targetNode = nearestNode(pointer);
+  if (targetNode !== null && neighbors(currentNode).includes(targetNode)) {
+    moveTo(targetNode);
+  }
+  draw();
+});
+
+canvas.addEventListener('pointerup', () => {
+  isPointerDown = false;
+  pointer = null;
+  draw();
+});
+
+document.getElementById('btn-home').addEventListener('click', () => {
+  window.parent.postMessage({ type: 'closeGame' }, '*');
+});
+document.getElementById('btn-undo').addEventListener('click', undoMove);
+document.getElementById('btn-restart').addEventListener('click', resetGame);
+document.getElementById('btn-start').addEventListener('click', () => {
+  intro.classList.add('hidden');
+  resetGame();
+});
+
+resize();
+window.addEventListener('resize', resize);
+resetGame();
+updateTimer();
+</script>
+</body>
+</html>

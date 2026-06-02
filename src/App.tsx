@@ -67,7 +67,7 @@ function readDanceScores() {
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
-  const [showGame, setShowGame] = useState<null | 'lunch' | 'dance'>(null)
+  const [showGame, setShowGame] = useState<null | 'oneLine' | 'lunch' | 'dance'>(null)
   const [lunchrunRecords, setLunchrunRecords] = useState(() => readLunchrunScores())
   const [danceRecords, setDanceRecords] = useState(() => readDanceScores())
 
@@ -110,6 +110,7 @@ export default function App() {
     const rowCleanups: Array<() => void> = []
     document.querySelectorAll<HTMLElement>('.row').forEach(r => {
       const onClick = () => {
+        if (r.dataset.game === 'hanbutgrigi') { setShowGame('oneLine'); return; }
         if (r.dataset.game === 'unicycle') { setShowGame('lunch'); return; }
         if (r.dataset.game === 'lovebeat') { setShowGame('dance'); return; }
         const burst = document.createElement('div')
@@ -145,6 +146,17 @@ export default function App() {
         </div>
 
         <div className="hero-frame" ref={heroFrameRef}>
+          {showGame === 'oneLine' && (
+            <iframe
+              src="/games/one-line.html"
+              style={{
+                position: 'absolute', inset: 0, zIndex: 100,
+                width: '100%', height: '100%', border: 'none',
+              }}
+              title="칠판 낙서 왕"
+              allowFullScreen
+            />
+          )}
           {showGame === 'lunch' && (
             <iframe
               src="/games/lunch-run.html"
