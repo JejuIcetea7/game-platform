@@ -31,10 +31,9 @@ const emptyScoreRecords: Record<GameKey, ScoreRecord[]> = {
 }
 
 const CHAR_FRAMES = [
-  { src: '/characters/main_1.png', duration: 2000 },
-  { src: '/characters/main_2.png', duration: 700 },
-  { src: '/characters/main_3.png', duration: 350 },
-  { src: '/characters/main_4.png', duration: 600 },
+  { src: '/characters/scribbling_character.png',   duration: 3200 }, // 낙서하는 모습 (길게)
+  { src: '/characters/surprised_character.png',    duration: 700  }, // 들켜서 놀라는 모습 (짧게)
+  { src: '/characters/running_away_character.png', duration: 800  }, // 도망가는 모습 → 오른쪽 퇴장
 ]
 
 export default function App() {
@@ -257,15 +256,6 @@ export default function App() {
               <span style={{ left: '1160px', top: '590px', fontSize: '48px', animationDelay: '1.7s' }}>✧</span>
             </div>
 
-            <div className="char-zone">
-              <img
-                key={charFrame}
-                src={CHAR_FRAMES[charFrame].src}
-                className={`char-anim${charFrame === 3 ? ' char-anim--exit' : ''}`}
-                alt=""
-              />
-              <div className="char-shadow"></div>
-            </div>
           </div>
 
           <div className="tray">
@@ -281,6 +271,15 @@ export default function App() {
           </div>
         </div>
 
+        <div className="char-zone">
+              <img
+                key={charFrame}
+                src={CHAR_FRAMES[charFrame].src}
+                className={`char-anim${charFrame === 2 ? ' char-anim--exit' : charFrame === 1 ? ' char-anim--surprise' : ''}`}
+                alt=""
+              />
+              <div className="char-shadow"></div>
+            </div>
         <div className="floor"></div>
         <div className="desks">
           <div className="desk desk1">
