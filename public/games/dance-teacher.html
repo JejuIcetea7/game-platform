@@ -32,20 +32,20 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #1A1008; }
 
 /* Top game buttons */
 #top-btns {
-  position: absolute; top: 0; left: 0; right: 0;
-  display: none; justify-content: space-between; align-items: flex-start;
-  padding: 10px 14px; z-index: 150; pointer-events: none;
+  position: absolute; top: 10px; left: 10px;
+  display: none; z-index: 150;
 }
-#top-btns.visible { display: flex; }
+#top-btns.visible { display: block; }
 .top-btn {
-  font-family: 'Dokdo', cursive; font-size: 17px;
-  background: #FAF3E3; color: #1A1008;
-  border: 2.5px solid #1A1008; padding: 6px 14px;
-  cursor: pointer; box-shadow: 3px 3px 0 #1A1008;
-  transition: transform .1s, box-shadow .1s;
-  pointer-events: all;
+  font-family: 'Black Han Sans', sans-serif; font-size: 15px;
+  background: rgba(250,243,227,0.88); color: #1A1008;
+  border: 2px solid #1A1008; padding: 5px 14px;
+  cursor: pointer; box-shadow: 2px 2px 0 #1A1008;
+  transition: transform .08s, box-shadow .08s;
+  letter-spacing: .5px; backdrop-filter: blur(2px);
 }
-.top-btn:hover { transform: translate(1px,1px); box-shadow: 2px 2px 0 #1A1008; }
+.top-btn:hover { transform: translate(-1px,-1px); box-shadow: 3px 3px 0 #1A1008; }
+.top-btn:active { transform: translate(1px,1px); box-shadow: 1px 1px 0 #1A1008; }
 
 
 /* Intro */
@@ -217,13 +217,18 @@ const PANEL_W = LANE_COL_W * 4 + 8; // 200
 const LANE_X = LANE_ORDER.map((_,i) => PANEL_X + 4 + LANE_COL_W*i + LANE_COL_W/2);
 // LANE_X = [~36, ~84, ~132, ~180]
 
-const NOTE_TOP   = 68;
+const NOTE_TOP   = 14;
 const HIT_Y      = 610;
 const KEY_IND_Y  = HIT_Y + 8;  // key indicator top
 const KEY_IND_H  = 42;
-const NOTE_SIZE  = 38;
-const NOTE_SPEED = 280; // px/s
-const NOTE_INTERVAL = 700; // ms between notes
+const NOTE_SIZE  = 46;
+const NOTE_SPEED_BASE = 260; // px/s (초기)
+const NOTE_SPEED_MAX  = 520; // px/s (최대)
+const NOTE_INTERVAL_BASE = 750; // ms (초기)
+const NOTE_INTERVAL_MIN  = 380; // ms (최소)
+// NOTE_SPEED / NOTE_INTERVAL 은 경과 시간에 따라 동적 계산
+const NOTE_SPEED = NOTE_SPEED_BASE; // (하위 호환용, 실제 사용 안 함)
+const NOTE_INTERVAL = NOTE_INTERVAL_BASE;
 const WIN_PERFECT = 40, WIN_GOOD = 80;
 
 const DIR_SYM   = {left:'←', up:'↑', down:'↓', right:'→'};
@@ -254,7 +259,7 @@ function initState() {
     stumbleTimer: 0,    // >0 = show stumble image
     everDanced: false,  // tracks if player ever pressed arrow
     // effects
-    popups: [], hitFx: [], caughtFlash: 0,
+    popups: [], hitFx: [], caughtFlash: 0, comboMilestone: null,
     sparkles: Array.from({length:10},makeSparkle),
   };
 }
@@ -306,6 +311,11 @@ function tryHit(dir) {
     const perfect = bestDist < WIN_PERFECT;
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
     G.score += (perfect ? 100 : 50) * Math.ceil(G.combo/5);
+    if(G.combo % 10 === 0) {
+      const bonus = G.combo * 50;
+      G.score += bonus;
+      G.comboMilestone = { combo: G.combo, bonus, life: 2.2 };
+    }
     addPopup(perfect?'PERFECT!':'GOOD!', perfect?'#f7b6c4':'#ffe066', cx, HIT_Y-28);
     addHitFx(cx, HIT_Y, DIR_COLOR[dir]);
     best.dead = true;
@@ -350,16 +360,21 @@ function update(dt) {
     if(G.stumbleTimer <= 0) G.stumbleTimer = 0;
   }
 
+  // 경과 시간으로 난이도 계산 (0→1, 60초 기준)
+  const progress = Math.min(1, (GAME_DURATION - G.timer) / GAME_DURATION);
+  const curSpeed = NOTE_SPEED_BASE + (NOTE_SPEED_MAX - NOTE_SPEED_BASE) * progress;
+  const curInterval = NOTE_INTERVAL_BASE - (NOTE_INTERVAL_BASE - NOTE_INTERVAL_MIN) * progress;
+
   // Notes – stop ONLY when teacher is warning/turned AND hiding
   const notePaused = G.hiding && (G.tState === 'warning' || G.tState === 'turned');
   if(!notePaused) {
     G.nextNote -= dt*1000;
     if(G.nextNote <= 0) {
       spawnNote();
-      G.nextNote = NOTE_INTERVAL + (Math.random()-0.5)*200;
+      G.nextNote = curInterval + (Math.random()-0.5)*120;
     }
     for(const n of G.notes) {
-      n.y += NOTE_SPEED*dt;
+      n.y += curSpeed*dt;
       if(n.y > HIT_Y + WIN_GOOD + 8 && !n.dead) {
         G.combo = 0;
         G.stumbleTimer = 1.5; // show stumble image
@@ -398,6 +413,7 @@ function update(dt) {
 
   // Popups
   for(const p of G.popups) p.life -= dt*2; G.popups = G.popups.filter(p=>p.life>0);
+  if(G.comboMilestone) { G.comboMilestone.life -= dt; if(G.comboMilestone.life<=0) G.comboMilestone=null; }
 
   // Hit FX
   for(const h of G.hitFx) {
@@ -448,6 +464,7 @@ function draw() {
   drawHitFx();
   drawHUD();
   drawPopups();
+  if(G.comboMilestone) drawComboMilestone();
   if(G.dancing) drawSparkles();
   if(G.hiding) drawHidingEffect();
   if(G.caughtFlash>0) { drawFlash(); }
@@ -776,7 +793,7 @@ function drawNotePanel() {
   ctx.save();
   ctx.font="15px 'Dokdo',cursive"; ctx.fillStyle='#1A1008';
   ctx.textAlign='center';
-  ctx.fillText('댄스 타이밍', PANEL_X+PANEL_W/2, NOTE_TOP-4);
+  ctx.fillText('  ', PANEL_X+PANEL_W/2, NOTE_TOP-4);
   ctx.restore();
 
   // HIT line
@@ -830,15 +847,20 @@ function drawNotes() {
     const nx=n.x, ny=n.y, hs=NOTE_SIZE/2;
     // shadow
     ctx.save(); ctx.globalAlpha=0.22; ctx.fillStyle='#1A1008';
-    rr(ctx,nx-hs+3,ny-hs+4,NOTE_SIZE,NOTE_SIZE,9); ctx.fill(); ctx.restore();
+    rr(ctx,nx-hs+3,ny-hs+4,NOTE_SIZE,NOTE_SIZE,10); ctx.fill(); ctx.restore();
     // block
     ctx.save();
-    ctx.fillStyle=DIR_COLOR[n.dir]; ctx.strokeStyle='#1A1008'; ctx.lineWidth=3;
-    rr(ctx,nx-hs,ny-hs,NOTE_SIZE,NOTE_SIZE,9);
+    ctx.fillStyle=DIR_COLOR[n.dir]; ctx.strokeStyle='#1A1008'; ctx.lineWidth=4;
+    rr(ctx,nx-hs,ny-hs,NOTE_SIZE,NOTE_SIZE,10);
     ctx.fill(); ctx.stroke();
-    // symbol
-    ctx.fillStyle='#FAF3E3'; ctx.font='bold 20px monospace';
+    // inner highlight
+    ctx.fillStyle='rgba(255,255,255,0.18)';
+    rr(ctx,nx-hs+4,ny-hs+4,NOTE_SIZE-8,NOTE_SIZE*0.45,7); ctx.fill();
+    // symbol — 굵은 화살표
+    ctx.fillStyle='#FAF3E3'; ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=3;
+    ctx.font='bold 28px monospace';
     ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.strokeText(DIR_SYM[n.dir],nx,ny);
     ctx.fillText(DIR_SYM[n.dir],nx,ny);
     ctx.restore();
   }
@@ -901,6 +923,39 @@ function drawPopups() {
     ctx.strokeStyle='#1A1008'; ctx.lineWidth=4; ctx.strokeText(p.text,0,0);
     ctx.fillStyle=p.color; ctx.fillText(p.text,0,0); ctx.restore();
   }
+}
+
+// ── Combo Milestone ───────────────────────────────────────────────────────────
+function drawComboMilestone() {
+  const m = G.comboMilestone;
+  if(!m) return;
+  const prog = m.life / 2.2; // 1→0
+  // prog goes 1→0; fade in at start (high prog), fade out near end (low prog)
+  const alpha = prog > 0.85 ? (1-prog)/0.15 : prog < 0.25 ? prog/0.25 : 1;
+  const rise = (1-prog)*60;
+  const scale = 0.7 + prog*0.6;
+  const cx = DANCE_CX - 120;
+  const cy = DANCE_CY - 200 - rise;
+  ctx.save();
+  ctx.globalAlpha = Math.min(1, alpha);
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  // glow
+  ctx.shadowColor = '#ffd700'; ctx.shadowBlur = 24;
+  // main text
+  ctx.font = "bold 44px 'Black Han Sans', sans-serif";
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.strokeStyle = '#7c4700'; ctx.lineWidth = 6;
+  ctx.strokeText(`🔥 ${m.combo}콤보!`, 0, 0);
+  ctx.fillStyle = '#ffd700';
+  ctx.fillText(`🔥 ${m.combo}콤보!`, 0, 0);
+  // bonus text
+  ctx.font = "bold 26px 'Jua', sans-serif";
+  ctx.strokeStyle = '#333'; ctx.lineWidth = 4;
+  ctx.strokeText(`+${m.bonus}점`, 0, 46);
+  ctx.fillStyle = '#fff';
+  ctx.fillText(`+${m.bonus}점`, 0, 46);
+  ctx.restore();
 }
 
 // ── Sparkles ──────────────────────────────────────────────────────────────────

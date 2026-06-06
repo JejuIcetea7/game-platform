@@ -31,8 +31,8 @@ const emptyScoreRecords: Record<GameKey, ScoreRecord[]> = {
 }
 
 const CHAR_FRAMES = [
-  { src: '/characters/scribbling_character.png', duration: 2000 },
-  { src: '/characters/surprised_character.png', duration: 600 },
+  { src: '/characters/scribbling_character.png', duration: 3200 },
+  { src: '/characters/surprised_character.png', duration: 700 },
   { src: '/characters/running_away_character.png', duration: 800 },
 ]
 
@@ -249,6 +249,7 @@ export default function App() {
               <span style={{ left: '1160px', top: '590px', fontSize: '48px', animationDelay: '1.7s' }}>✧</span>
             </div>
 
+<<<<<<< HEAD
             <div className="char-zone">
               <img
                 key={charFrame}
@@ -258,6 +259,8 @@ export default function App() {
               />
               <div className="char-shadow"></div>
             </div>
+=======
+>>>>>>> origin/dev
           </div>
 
           <div className="tray">
@@ -273,6 +276,15 @@ export default function App() {
           </div>
         </div>
 
+        <div className="char-zone">
+              <img
+                key={charFrame}
+                src={CHAR_FRAMES[charFrame].src}
+                className={`char-anim${charFrame === 2 ? ' char-anim--exit' : charFrame === 1 ? ' char-anim--surprise' : ''}`}
+                alt=""
+              />
+              <div className="char-shadow"></div>
+            </div>
         <div className="floor"></div>
         <div className="desks">
           <div className="desk desk1">
