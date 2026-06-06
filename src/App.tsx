@@ -36,103 +36,127 @@ const CHAR_FRAMES = [
   { src: '/characters/running_away_character.png', duration: 800 },
 ]
 
-// ── 메인화면 배경음악 (우당탕탕 학교생활 테마) ─────────────────────────────
+// ── 메인화면 배경음악 (우당탕탕 학교생활 — 웹플래시 게임풍) ──────────────
 type StopFn = () => void
 function startMainBGM(actx: AudioContext): StopFn {
-  // 마스터 볼륨
-  const master = actx.createGain(); master.gain.value = 0.17; master.connect(actx.destination)
-  const BPM = 136, B = 60 / BPM  // 신나는 빠른 템포
+  // masterGain으로 즉시 뮤트 가능
+  const master = actx.createGain(); master.gain.value = 0.16; master.connect(actx.destination)
+  let stopped = false
+
+  // ── 주파수 테이블 ──
   const F: Record<string,number> = {
     C3:130.81,D3:146.83,E3:164.81,F3:174.61,G3:196,A3:220,B3:246.94,
     C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,A4:440,B4:493.88,
-    C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880,_:0
+    C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,A5:880,B5:987.77,C6:1046.5,_:0
   }
-  // ── 우당탕탕 학교 행진곡 멜로디 ──
-  // 8마디 × 8박 = 64스텝 (스텝 = 8분음표)
+
+  // ── 신나는 플래시게임풍 학교 테마 (C장조, 160BPM) ──
+  // 뻔뻔하게 귀에 꽂히는 8비트 멜로디
+  const BPM = 160, step = (60/BPM)*0.5   // 8분음표
   const MEL: string[] = [
-    // 마디 1-2: 팡파르 느낌 도입
-    'C5','_','C5','E5','G5','_','E5','_',
-    'C5','E5','G5','C5','_','G4','A4','_',
-    // 마디 3-4: 달리는 느낌
-    'C5','D5','E5','F5','G5','_','G5','A5',
-    'G5','E5','C5','_','D5','E5','F5','_',
-    // 마디 5-6: 익살스러운 구간
-    'E5','_','D5','_','C5','D5','E5','C5',
-    'F5','_','E5','_','D5','E5','F5','D5',
-    // 마디 7-8: 클라이맥스 → 처음으로
-    'G5','_','G5','_','A5','G5','F5','E5',
-    'D5','E5','F5','E5','D5','C5','_','_',
+    // A파트: 도약감 있는 도입
+    'C5','E5','G5','_','C6','_','B5','A5',
+    'G5','_','E5','G5','A5','_','G5','_',
+    'F5','A5','C6','_','A5','G5','F5','E5',
+    'D5','F5','A5','_','G5','_','_','_',
+    // B파트: 익살스럽고 통통 튀는 느낌
+    'G5','G5','A5','G5','F5','E5','D5','C5',
+    'E5','_','D5','_','C5','_','G4','_',
+    'A4','C5','E5','G5','A5','C6','_','A5',
+    'G5','E5','C5','_','_','_','_','_',
   ]
   const BASS: string[] = [
-    'C3','_','G3','_','E3','_','G3','_',
-    'C3','_','G3','_','C3','_','_','_',
     'C3','_','G3','_','C3','_','G3','_',
-    'F3','_','C3','_','G3','_','G3','_',
+    'C3','_','E3','_','F3','_','G3','_',
+    'F3','_','C3','_','F3','_','C3','_',
+    'G3','_','D3','_','G3','_','_','_',
     'C3','_','G3','_','C3','_','E3','_',
-    'F3','_','C3','_','G3','_','D3','_',
-    'G3','_','D3','_','G3','_','B3','_',
-    'C3','_','G3','_','C3','_','_','_',
+    'A3','_','E3','_','A3','_','G3','_',
+    'F3','_','C3','_','F3','_','A3','_',
+    'G3','_','G3','_','C3','_','_','_',
   ]
-  let stopped = false, loop = 0
-  function playNote(freq: number, t: number, dur: number, type: OscillatorType, vol: number, vib=false) {
+  // 화음 (3도 위)
+  const HARM: string[] = [
+    'E5','_','B5','_','E6','_','D6','C6',
+    'B5','_','G5','B5','C6','_','B5','_',
+    'A5','C6','E6','_','C6','B5','A5','G5',
+    'F5','A5','C6','_','B5','_','_','_',
+    'B5','B5','C6','B5','A5','G5','F5','E5',
+    'G5','_','F5','_','E5','_','B4','_',
+    'C5','E5','G5','B5','C6','E6','_','C6',
+    'B5','G5','E5','_','_','_','_','_',
+  ]
+
+  function playNote(freq: number, t: number, dur: number, type: OscillatorType, vol: number) {
     if(!freq || stopped) return
     const o = actx.createOscillator(), g = actx.createGain()
     o.connect(g); g.connect(master)
     o.type = type; o.frequency.value = freq
     g.gain.setValueAtTime(0, t)
-    g.gain.linearRampToValueAtTime(vol, t+0.015)
-    g.gain.linearRampToValueAtTime(vol*0.7, t+dur*0.5)
-    g.gain.linearRampToValueAtTime(0, t+dur*0.88)
-    o.start(t); o.stop(t+dur)
-    // 비브라토 (멜로디에만)
-    if(vib) {
-      const lfo = actx.createOscillator(), lfoG = actx.createGain()
-      lfo.frequency.value = 5.5; lfoG.gain.value = 6
-      lfo.connect(lfoG); lfoG.connect(o.frequency)
-      lfo.start(t+dur*0.4); lfo.stop(t+dur)
-    }
+    g.gain.linearRampToValueAtTime(vol, t+0.01)
+    g.gain.setValueAtTime(vol*0.8, t+dur*0.6)
+    g.gain.linearRampToValueAtTime(0, t+dur*0.92)
+    o.start(t); o.stop(t+dur+0.01)
   }
   function kick(t: number) {
+    if(stopped) return
     const o=actx.createOscillator(), g=actx.createGain()
     o.connect(g); g.connect(master); o.type='sine'
-    o.frequency.setValueAtTime(180,t); o.frequency.exponentialRampToValueAtTime(35,t+0.12)
-    g.gain.setValueAtTime(0.55,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.18)
-    o.start(t); o.stop(t+0.2)
+    o.frequency.setValueAtTime(200,t); o.frequency.exponentialRampToValueAtTime(35,t+0.1)
+    g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15)
+    o.start(t); o.stop(t+0.18)
   }
   function snare(t: number) {
-    const buf=actx.createBuffer(1,actx.sampleRate*0.15,actx.sampleRate)
-    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(actx.sampleRate*0.05))
+    if(stopped) return
+    const buf=actx.createBuffer(1,Math.floor(actx.sampleRate*0.12),actx.sampleRate)
+    const d=buf.getChannelData(0)
+    for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(actx.sampleRate*0.04))
     const src=actx.createBufferSource(), g=actx.createGain()
     src.connect(g); g.connect(master); src.buffer=buf
-    g.gain.setValueAtTime(0.35,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15)
-    src.start(t); src.stop(t+0.16)
+    g.gain.setValueAtTime(0.28,t)
+    src.start(t); src.stop(t+0.13)
   }
+  function hat(t: number, vol: number) {
+    if(stopped) return
+    const buf=actx.createBuffer(1,Math.floor(actx.sampleRate*0.03),actx.sampleRate)
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)
+    const src=actx.createBufferSource(), g=actx.createGain()
+    const flt=actx.createBiquadFilter(); flt.type='highpass'; flt.frequency.value=10000
+    src.connect(flt); flt.connect(g); g.connect(master); src.buffer=buf
+    g.gain.setValueAtTime(vol,t)
+    src.start(t); src.stop(t+0.03)
+  }
+
+  let loop = 0
   function schedule() {
     if(stopped) return
-    const step = B * 0.5  // 8분음표
     const loopLen = MEL.length * step
-    const s = actx.currentTime + 0.05 + loop * loopLen
-    // 멜로디 (square → 브라스 느낌)
-    MEL.forEach((n,i) => playNote(F[n]||0, s+i*step, step*0.78, 'square', 0.28, false))
-    // 베이스 (triangle)
-    BASS.forEach((n,i) => playNote(F[n]||0, s+i*step, step*0.9, 'triangle', 0.22))
-    // 화음 (멜로디 3도 아래 - 따라가는 느낌)
-    MEL.forEach((n,i) => {
-      const f = F[n]||0; if(!f) return
-      playNote(f*0.794, s+i*step, step*0.7, 'sine', 0.12)
-    })
-    // 드럼 패턴 (4/4박자, 8마디)
-    const beats = MEL.length / 2  // 비트 수 (4분음표)
+    const s = actx.currentTime + 0.06 + loop * loopLen
+    // 멜로디: 네모파 (플래시게임 칩튠 느낌)
+    MEL.forEach((n,i)  => playNote(F[n]||0, s+i*step, step*0.72, 'square',   0.22))
+    // 3도 화음: 부드럽게
+    HARM.forEach((n,i) => playNote(F[n]||0, s+i*step, step*0.65, 'sine',     0.10))
+    // 베이스: 삼각파 (통통 튀는 느낌)
+    BASS.forEach((n,i) => playNote(F[n]||0, s+i*step, step*0.88, 'triangle', 0.20))
+    // 드럼: 킥(1,3박) 스네어(2,4박) 하이햇(8분)
+    const beats = MEL.length / 2
     for(let i=0;i<beats;i++) {
-      const bt = s + i * B
-      kick(bt)                          // 모든 박에 킥
-      if(i%2===1) snare(bt)             // 2,4박에 스네어
+      const bt = s + i*(step*2)
+      kick(bt)
+      if(i%2===1) snare(bt)
+      hat(bt, 0.07); hat(bt+step, 0.05)
     }
     loop++
-    setTimeout(schedule, (loopLen - 0.25) * 1000)
+    setTimeout(schedule, (loopLen - 0.3) * 1000)
   }
   schedule()
-  return () => { stopped = true }
+
+  return () => {
+    stopped = true
+    // 즉시 무음 (이미 예약된 오실레이터 소리 차단)
+    master.gain.cancelScheduledValues(actx.currentTime)
+    master.gain.setValueAtTime(0, actx.currentTime)
+  }
 }
 
 export default function App() {

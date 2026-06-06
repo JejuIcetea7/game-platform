@@ -237,27 +237,41 @@ function sfxCombo(combo) {
   if(combo>=30) sfxNote(1568,0.15,'sine',0.3,t+0.32); // 고콤보 추가음
 }
 function sfxGameOverDance(caught) {
-  const ac=getAC(), t=ac.currentTime;
+  const ac=getAC(), t=ac.currentTime+0.04;
   if(caught) {
-    // 걸렸다! - 경보음 + 하강 아르페지오
-    [880,784,698,587,523].forEach((f,i)=>sfxNote(f,0.14,'square',0.28,t+i*0.1));
-    // 선생님 호루라기
+    // ── 걸렸다! ──
+    // ① 충격음: 날카로운 불협화음
+    [[880,0],[784,0.04],[698,0.08],[587,0.12],[440,0.18]].forEach(([f,d])=>{
+      sfxNote(f, 0.12, 'sawtooth', 0.3, t+d);
+    });
+    // ② 선생님 호루라기 (삐리릭!)
     setTimeout(()=>{
       const st=ac.currentTime;
-      const o=ac.createOscillator(),g=ac.createGain();
-      o.connect(g); g.connect(ac.destination); o.type='sine';
-      o.frequency.setValueAtTime(2600,st); o.frequency.linearRampToValueAtTime(2900,st+0.12);
-      o.frequency.linearRampToValueAtTime(2500,st+0.25);
-      g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(0.55,st+0.01);
-      g.gain.linearRampToValueAtTime(0,st+0.28);
-      o.start(st); o.stop(st+0.3);
-    }, 600);
-  } else {
-    // 수업 종료! - 학교 종소리 느낌
-    [523,659,784,659,523,784,523].forEach((f,i)=>{
-      sfxNote(f,0.18,'sine',0.32,t+i*0.14);
+      function whistle(st2,f0,f1,dur,vol){
+        const o=ac.createOscillator(),g=ac.createGain();
+        o.connect(g); g.connect(ac.destination); o.type='sine';
+        o.frequency.setValueAtTime(f0,st2); o.frequency.linearRampToValueAtTime(f1,st2+dur*0.4); o.frequency.linearRampToValueAtTime(f0,st2+dur);
+        g.gain.setValueAtTime(0,st2); g.gain.linearRampToValueAtTime(vol,st2+0.01); g.gain.linearRampToValueAtTime(0,st2+dur+0.02);
+        o.start(st2); o.stop(st2+dur+0.05);
+      }
+      whistle(st,      2500, 3000, 0.12, 0.55);
+      whistle(st+0.18, 2500, 3000, 0.12, 0.55);
+      whistle(st+0.36, 2300, 3200, 0.4,  0.7); // 길고 강하게
+    }, 500);
+    // ③ 점점 느려지는 피아노 하강
+    [523,466,415,370,330,294,261].forEach((f,i)=>{
+      sfxNote(f, 0.22, 'sine', 0.28, t+0.8+i*0.18);
     });
-    sfxNote(1047,0.4,'sine',0.28,t+0.7); // 마지막 높은 음
+  } else {
+    // ── 수업 종료 성공! ── 팡파르 + 학교 종소리
+    // 빠밤! 팡파르
+    [[523,0],[659,0.12],[784,0.24],[1047,0.38]].forEach(([f,d])=>{
+      sfxNote(f, 0.25, 'square', 0.2, t+d);
+    });
+    // 딩동댕동~ 종소리
+    [[1047,0.7],[784,0.9],[880,1.1],[1047,1.3],[784,1.55],[659,1.75],[784,1.95],[523,2.2]].forEach(([f,d])=>{
+      sfxNote(f, 0.35, 'sine', 0.3, t+d);
+    });
   }
 }
 

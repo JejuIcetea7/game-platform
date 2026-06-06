@@ -579,153 +579,207 @@ document.addEventListener('keyup', e => {
   if (e.code === 'ArrowRight') keys.R = false;
 });
 
-// ── 오디오 엔진 ──────────────────────────────────────────────────────────────
-let audioCtx = null, bgmStopped = false;
-let bgmNextBeat = 0, bgmBeatIdx = 0; // 가변템포 스케줄러용
-const BGM_MASTER_VOL = 0.15;
+// ══ 오디오 엔진 (Web Audio API) ══════════════════════════════════════════════
+let audioCtx = null;
+let bgmMaster = null;   // 마스터 게인 (즉시 무음 가능)
+let bgmStopped = false;
+let bgmTimerId = null;
+let bgmNextBeat = 0, bgmBeatIdx = 0;
 
 function initAudio() {
   if(audioCtx) return;
   audioCtx = new AudioContext();
+  bgmMaster = audioCtx.createGain();
+  bgmMaster.gain.value = 0.16;
+  bgmMaster.connect(audioCtx.destination);
 }
 
-// 주파수 테이블
+// ── 주파수 테이블 ─────────────────────────────────────────────────────────────
 const BF = {
-  G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,
-  G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,_:0
+  G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,G4:392,
+  A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,G5:783.99,_:0
 };
-// 레이스 멜로디 (G장조, 32스텝)
-const BGM_MEL = [
-  'G4','B4','D5','_','B4','D5','G5','_',
-  'F5','E5','D5','B4','_','D5','E5','_',
-  'G4','A4','B4','D5','E5','_','D5','B4',
-  'A4','_','G4','A4','B4','D5','G4','_',
+
+// ── 레이스 BGM 멜로디 (G장조, 신나는 달리기 느낌) ──────────────────────────
+// 멜로디 A파트
+const BGM_MEL_A = [
+  'D5','_','G5','_','B5','_','G5','_',
+  'A5','G5','F5','E5','D5','_','_','_',
+  'G4','B4','D5','G5','_','D5','B4','G4',
+  'A4','C5','E5','_','D5','_','_','_',
 ];
-const BGM_BASS = [
+// 멜로디 B파트 (빌드업 구간)
+const BGM_MEL_B = [
+  'G5','_','F5','E5','D5','E5','F5','G5',
+  'A5','_','G5','_','E5','_','D5','_',
+  'B4','D5','G5','B5','_','A5','G5','F5',
+  'G5','_','_','_','D5','_','_','_',
+];
+const BGM_BASS_A = [
   'G3','_','G3','_','G3','_','B3','_',
-  'C4','_','C4','_','A3','_','A3','_',
-  'G3','_','G3','_','C4','_','C4','_',
-  'D4','_','D4','_','G3','_','G3','_',
+  'A3','_','A3','_','D3','_','_','_',
+  'G3','_','G3','_','E3','_','G3','_',
+  'A3','_','C4','_','D3','_','_','_',
+];
+const BGM_BASS_B = [
+  'G3','_','A3','_','B3','_','C4','_',
+  'A3','_','D4','_','C4','_','B3','_',
+  'G3','_','G3','_','G3','_','A3','_',
+  'G3','_','_','_','D3','_','_','_',
 ];
 
+// 구간 (8마디 A → 8마디 B 반복)
+const BGM_SECTION_LEN = BGM_MEL_A.length; // 32스텝
+const BGM_TOTAL = BGM_SECTION_LEN * 2;    // 64스텝 1루프
+
+function bgmGetNote(idx) {
+  const i = idx % BGM_TOTAL;
+  return i < BGM_SECTION_LEN
+    ? { mel: BGM_MEL_A[i], bass: BGM_BASS_A[i] }
+    : { mel: BGM_MEL_B[i-BGM_SECTION_LEN], bass: BGM_BASS_B[i-BGM_SECTION_LEN] };
+}
+
+// ── 음 생성 함수 ──────────────────────────────────────────────────────────────
 function bgmNote(freq, t, dur, type, vol) {
-  if(!freq||bgmStopped||!audioCtx) return;
+  if(!freq||bgmStopped||!audioCtx||!bgmMaster) return;
   const ac=audioCtx;
   const o=ac.createOscillator(), g=ac.createGain();
-  o.connect(g); g.connect(ac.destination);
+  o.connect(g); g.connect(bgmMaster);
   o.type=type; o.frequency.value=freq;
-  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.012);
-  g.gain.linearRampToValueAtTime(0,t+dur*0.82);
-  o.start(t); o.stop(t+dur);
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.01);
+  g.gain.setValueAtTime(vol*0.8, t+dur*0.55);
+  g.gain.linearRampToValueAtTime(0, t+dur*0.9);
+  o.start(t); o.stop(t+dur+0.01);
 }
 function bgmKick(t) {
-  if(!audioCtx||bgmStopped) return;
-  const ac=audioCtx;
-  const o=ac.createOscillator(),g=ac.createGain();
-  o.connect(g); g.connect(ac.destination); o.type='sine';
-  o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(40,t+0.1);
-  g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+  if(!audioCtx||bgmStopped||!bgmMaster) return;
+  const ac=audioCtx, o=ac.createOscillator(), g=ac.createGain();
+  o.connect(g); g.connect(bgmMaster); o.type='sine';
+  o.frequency.setValueAtTime(180,t); o.frequency.exponentialRampToValueAtTime(40,t+0.1);
+  g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
   o.start(t); o.stop(t+0.18);
 }
-function bgmHihat(t, vol) {
-  if(!audioCtx||bgmStopped) return;
+function bgmSnare(t) {
+  if(!audioCtx||bgmStopped||!bgmMaster) return;
   const ac=audioCtx;
-  const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*0.04),ac.sampleRate);
+  const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*0.1),ac.sampleRate);
+  const d=buf.getChannelData(0);
+  for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(ac.sampleRate*0.035));
+  const src=ac.createBufferSource(), g=ac.createGain();
+  src.connect(g); g.connect(bgmMaster); src.buffer=buf;
+  g.gain.setValueAtTime(0.3,t); src.start(t); src.stop(t+0.11);
+}
+function bgmHat(t, vol) {
+  if(!audioCtx||bgmStopped||!bgmMaster) return;
+  const ac=audioCtx;
+  const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*0.03),ac.sampleRate);
   const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
-  const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
-  f.type='highpass'; f.frequency.value=9000;
-  src.connect(f); f.connect(g); g.connect(ac.destination);
-  src.buffer=buf; g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
-  src.start(t); src.stop(t+0.05);
+  const src=ac.createBufferSource(), g=ac.createGain(), f=ac.createBiquadFilter();
+  f.type='highpass'; f.frequency.value=10000;
+  src.connect(f); f.connect(g); g.connect(bgmMaster); src.buffer=buf;
+  g.gain.setValueAtTime(vol,t); src.start(t); src.stop(t+0.03);
 }
 
-// ── 가변 템포 BGM 스케줄러 (lookahead clock 방식) ────────────────────────
-const BGM_LOOKAHEAD = 0.12; // 초 앞서 스케줄
-const BGM_SCHEDULE_MS = 50; // ms마다 체크
-let bgmTimerId = null;
-
-function currentBPM() {
-  // 게임 속도에 따라 BPM 변화: 110 → 190
-  if(!G || G.phase !== 'playing') return 110;
-  const ratio = Math.min(1, (G.spd - K.BASE_SPD) / (K.MAX_SPD - K.BASE_SPD));
-  return 110 + ratio * 80;
+// ── 가변 템포 스케줄러 (lookahead clock) ─────────────────────────────────────
+function getCurrentBPM() {
+  if(!G || G.phase!=='playing') return 115;
+  const ratio = Math.min(1, Math.max(0, (G.spd - K.BASE_SPD) / (K.MAX_SPD - K.BASE_SPD)));
+  return 115 + ratio * 85;   // 115 → 200 BPM
 }
 
 function scheduleBGM() {
   if(bgmStopped || !audioCtx) return;
+  const LOOKAHEAD = 0.1;
+  const bpm = getCurrentBPM();
+  const step = (60/bpm) * 0.5;  // 8분음표
   const ac = audioCtx;
-  const bpm = currentBPM();
-  const step = (60/bpm) * 0.5; // 8분음표 길이
-  const len = BGM_MEL.length;
 
-  while(bgmNextBeat < ac.currentTime + BGM_LOOKAHEAD) {
-    const i = bgmBeatIdx % len;
+  while(bgmNextBeat < ac.currentTime + LOOKAHEAD) {
+    const { mel, bass } = bgmGetNote(bgmBeatIdx);
     const t = bgmNextBeat;
-    bgmNote(BF[BGM_MEL[i]]||0, t, step*0.78, 'square',   0.24);
-    bgmNote(BF[BGM_BASS[i]]||0, t, step*0.9, 'triangle', 0.18);
-    // 킥: 첫 박 + 중간 박
-    if(i%8===0 || i%8===4) bgmKick(t);
-    // 하이햇: 짝수 스텝
-    if(i%2===0) bgmHihat(t, 0.08);
+    bgmNote(BF[mel]||0,  t, step*0.75, 'square',   0.22);
+    bgmNote(BF[bass]||0, t, step*0.88, 'triangle', 0.17);
+    // 드럼 패턴
+    const beat = bgmBeatIdx % 8;
+    if(beat===0||beat===4) bgmKick(t);
+    if(beat===2||beat===6) bgmSnare(t);
+    bgmHat(t, 0.07);
     bgmNextBeat += step;
     bgmBeatIdx++;
   }
-  bgmTimerId = setTimeout(scheduleBGM, BGM_SCHEDULE_MS);
+  bgmTimerId = setTimeout(scheduleBGM, 40);
 }
 
-function startBGM() {
+function startBGM(delayMs) {
   if(!audioCtx) return;
   bgmStopped = false;
-  bgmNextBeat = audioCtx.currentTime + 0.4; // 휘슬 후 시작 (0.4s 딜레이)
   bgmBeatIdx = 0;
+  bgmNextBeat = audioCtx.currentTime + (delayMs||0)/1000;
   scheduleBGM();
 }
 
 function stopBGM() {
   bgmStopped = true;
   if(bgmTimerId) { clearTimeout(bgmTimerId); bgmTimerId = null; }
+  // 즉시 무음
+  if(bgmMaster && audioCtx) {
+    bgmMaster.gain.cancelScheduledValues(audioCtx.currentTime);
+    bgmMaster.gain.setValueAtTime(0, audioCtx.currentTime);
+  }
 }
 
 // ── 효과음 ───────────────────────────────────────────────────────────────────
 function sfxWhistle() {
   if(!audioCtx) return;
-  const ac = audioCtx, t = ac.currentTime + 0.05;
-  // 삐이익~ 휘슬 (두 번)
-  function toot(st, freq1, freq2, dur, vol) {
+  const ac = audioCtx;
+  // 호루라기: 삐↑ 삐이이익↑↓ 두 번
+  function toot(st, f0, f1, dur, vol) {
     const o=ac.createOscillator(), g=ac.createGain();
+    // 배음 추가 (사각파+사인 믹스)
+    const o2=ac.createOscillator(), g2=ac.createGain();
     o.connect(g); g.connect(ac.destination); o.type='sine';
-    o.frequency.setValueAtTime(freq1, st);
-    o.frequency.linearRampToValueAtTime(freq2, st+dur*0.6);
-    o.frequency.linearRampToValueAtTime(freq1*0.98, st+dur);
-    g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(vol,st+0.015);
-    g.gain.setValueAtTime(vol,st+dur*0.85); g.gain.linearRampToValueAtTime(0,st+dur+0.02);
-    o.start(st); o.stop(st+dur+0.05);
+    o2.connect(g2); g2.connect(ac.destination); o2.type='square';
+    [o,o2].forEach(osc=>{ osc.frequency.setValueAtTime(f0,st); osc.frequency.linearRampToValueAtTime(f1,st+dur*0.5); osc.frequency.linearRampToValueAtTime(f0*1.02,st+dur); });
+    g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(vol,st+0.01); g.gain.setValueAtTime(vol,st+dur*0.88); g.gain.linearRampToValueAtTime(0,st+dur+0.02);
+    g2.gain.setValueAtTime(0,st); g2.gain.linearRampToValueAtTime(vol*0.18,st+0.01); g2.gain.linearRampToValueAtTime(0,st+dur*0.5);
+    [o,o2].forEach(osc=>{ osc.start(st); osc.stop(st+dur+0.05); });
   }
-  toot(t,      2400, 2800, 0.18, 0.55); // 짧게
-  toot(t+0.25, 2200, 3000, 0.32, 0.65); // 길게~
+  const t0 = ac.currentTime + 0.05;
+  toot(t0,        2600, 3100, 0.15, 0.5);  // 짧은 삐
+  toot(t0+0.22,   2400, 3200, 0.45, 0.65); // 길고 강한 삐이익~
 }
 
 function sfxGameOver() {
   if(!audioCtx) return;
   const ac = audioCtx, t = ac.currentTime + 0.05;
-  // 가격은 얼마일까요 지는 효과음 (내려가는 호른)
-  [[392,0],[349,0.22],[311,0.44],[261,0.66]].forEach(([f,d]) => {
-    const o=ac.createOscillator(),g=ac.createGain();
+  // "빠빠빠밤~" 내려가는 트롬본 패배음
+  [[440,0],[392,0.2],[349,0.4],[294,0.62],[247,0.85]].forEach(([f,d])=>{
+    const o=ac.createOscillator(), g=ac.createGain();
     o.connect(g); g.connect(ac.destination); o.type='sawtooth';
-    o.frequency.setValueAtTime(f,t+d);
-    g.gain.setValueAtTime(0,t+d); g.gain.linearRampToValueAtTime(0.32,t+d+0.02);
-    g.gain.linearRampToValueAtTime(0,t+d+0.2);
-    o.start(t+d); o.stop(t+d+0.22);
+    o.frequency.setValueAtTime(f, t+d);
+    if(d===0.85) o.frequency.linearRampToValueAtTime(f*0.5, t+d+0.5); // 마지막은 글리산도
+    g.gain.setValueAtTime(0,t+d); g.gain.linearRampToValueAtTime(0.35,t+d+0.02);
+    const endT = d===0.85 ? t+d+0.55 : t+d+0.18;
+    g.gain.linearRampToValueAtTime(0, endT);
+    o.start(t+d); o.stop(endT+0.01);
   });
-  // 쿵 (낙하음)
+  // 넘어지는 쿵! 소리
   setTimeout(()=>{
-    const o=ac.createOscillator(),g=ac.createGain();
-    o.connect(g); g.connect(ac.destination); o.type='sine';
-    o.frequency.setValueAtTime(120,ac.currentTime);
-    o.frequency.exponentialRampToValueAtTime(30,ac.currentTime+0.3);
-    g.gain.setValueAtTime(0.5,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.35);
-    o.start(ac.currentTime); o.stop(ac.currentTime+0.4);
-  }, 900);
+    if(!audioCtx) return;
+    const ac2=audioCtx, st=ac2.currentTime;
+    // 저음 쿵
+    const o=ac2.createOscillator(), g=ac2.createGain();
+    o.connect(g); g.connect(ac2.destination); o.type='sine';
+    o.frequency.setValueAtTime(80,st); o.frequency.exponentialRampToValueAtTime(25,st+0.4);
+    g.gain.setValueAtTime(0.55,st); g.gain.exponentialRampToValueAtTime(0.001,st+0.45);
+    o.start(st); o.stop(st+0.5);
+    // 노이즈 (먼지 날리는 느낌)
+    const buf=ac2.createBuffer(1,Math.floor(ac2.sampleRate*0.3),ac2.sampleRate);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*Math.exp(-i/(ac2.sampleRate*0.08));
+    const src=ac2.createBufferSource(), gn=ac2.createGain();
+    src.connect(gn); gn.connect(ac2.destination); src.buffer=buf;
+    gn.gain.setValueAtTime(0.25,st); src.start(st); src.stop(st+0.35);
+  }, 1000);
 }
 
 // ── 게임 흐름 ────────────────────────────────────────────────────────────
@@ -737,7 +791,7 @@ const goRank     = document.getElementById('go-rank');
 function startGame() {
   initAudio();
   sfxWhistle();
-  setTimeout(startBGM, 380); // 휘슬 끝나고 BGM 시작
+  startBGM(600); // 휘슬(~0.7s) 끝나고 BGM 시작
   G.phase   = 'playing';
   G.bal     =  0.11;
   G.balVel  =  0.30;
