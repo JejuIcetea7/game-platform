@@ -31,9 +31,9 @@ const emptyScoreRecords: Record<GameKey, ScoreRecord[]> = {
 }
 
 const CHAR_FRAMES = [
-  { src: '/characters/scribbling_character.png',   duration: 3200 }, // 낙서하는 모습 (길게)
-  { src: '/characters/surprised_character.png',    duration: 700  }, // 들켜서 놀라는 모습 (짧게)
-  { src: '/characters/running_away_character.png', duration: 800  }, // 도망가는 모습 → 오른쪽 퇴장
+  { src: '/characters/scribbling_character.png', duration: 3200 },
+  { src: '/characters/surprised_character.png', duration: 700 },
+  { src: '/characters/running_away_character.png', duration: 800 },
 ]
 
 export default function App() {
@@ -179,18 +179,11 @@ export default function App() {
         </svg>
 
         <div className="topbar">
-          <div className="logo-pill">
-            <div className="dot"></div>
-            <div className="name">우당탕탕</div>
-          </div>
-          <div className="crumb">
-            <div className="pin"></div>
-            <div>3학년 2반 · 5월 20일 (수) · 맑음</div>
+          <div className="topbar-welcome">
+            미니게임 플랫폼 우당탕탕 학교생활에 오신 걸 환영합니다!
           </div>
           <div className="spacer"></div>
-          <div className="iconbtn" title="설정">⚙</div>
           <div className="iconbtn" title="소리">♪</div>
-          <div className="iconbtn" title="프로필">👤</div>
         </div>
 
         <div className="board-wrap">
@@ -256,6 +249,18 @@ export default function App() {
               <span style={{ left: '1160px', top: '590px', fontSize: '48px', animationDelay: '1.7s' }}>✧</span>
             </div>
 
+<<<<<<< HEAD
+            <div className="char-zone">
+              <img
+                key={charFrame}
+                src={CHAR_FRAMES[charFrame].src}
+                className={`char-anim${charFrame === 2 ? ' char-anim--exit' : ''}`}
+                alt=""
+              />
+              <div className="char-shadow"></div>
+            </div>
+=======
+>>>>>>> origin/dev
           </div>
 
           <div className="tray">
