@@ -252,6 +252,28 @@ const H = 720;
 canvas.width = W;
 canvas.height = H;
 
+const sounds = {
+  stageStart: new Audio('/sounds/one-line/stage-start.mp3'),
+  connect: new Audio('/sounds/one-line/connect.mp3'),
+  clear: new Audio('/sounds/one-line/clear.mp3'),
+  fail: new Audio('/sounds/one-line/fail.mp3'),
+};
+
+Object.values(sounds).forEach(sound => {
+  sound.preload = 'auto';
+  sound.volume = 0.42;
+});
+sounds.connect.volume = 0.34;
+sounds.fail.volume = 0.48;
+
+function playSound(name) {
+  const source = sounds[name];
+  if (!source) return;
+  const sound = source.cloneNode();
+  sound.volume = source.volume;
+  sound.play().catch(() => {});
+}
+
 const levels = [
   {
     name: '첫 낙서',
@@ -410,7 +432,7 @@ function buildEdgeTexture(data) {
   ]));
 }
 
-function loadStage(index, resetClock = false) {
+function loadStage(index, resetClock = false, playStartSound = true) {
   currentLevelIndex = index;
   level = levels[currentLevelIndex];
   levelInfo = validateLevel(level);
@@ -431,6 +453,7 @@ function loadStage(index, resetClock = false) {
   stageEl.textContent = `${currentLevelIndex + 1}/${levels.length}단계 · ${level.name}`;
   setMessage('노란 시작점을 클릭하세요.');
   if (typeof updateDevPanel === 'function') updateDevPanel();
+  if (playStartSound) playSound('stageStart');
   draw();
 }
 
@@ -503,8 +526,8 @@ function updateTimer() {
   raf = requestAnimationFrame(updateTimer);
 }
 
-function resetGame() {
-  loadStage(0, true);
+function resetGame(playStartSound = true) {
+  loadStage(0, true, playStartSound);
 }
 
 function checkTerminalState() {
@@ -515,9 +538,11 @@ function checkTerminalState() {
     if (currentLevelIndex === levels.length - 1) {
       gameState = 'SUCCESS';
       setMessage(`ALL CLEAR! 5단계 완성 - ${elapsed.toFixed(2)}초`, 'clear');
+      playSound('clear');
     } else {
       gameState = 'STAGE_CLEAR';
       setMessage(`${currentLevelIndex + 1}단계 CLEAR! 다음 낙서로 넘어갑니다.`, 'clear');
+      playSound('clear');
       setTimeout(() => {
         if (gameState === 'STAGE_CLEAR') loadStage(currentLevelIndex + 1);
       }, 950);
@@ -534,6 +559,7 @@ function checkTerminalState() {
     pointer = null;
     burstAtNode(currentNode, '#f7b6c4', 34);
     setMessage('막혔어요! 되돌리기 버튼으로 이전 경로로 돌아갈 수 있어요.', 'fail');
+    playSound('fail');
     draw();
   }
 }
@@ -562,6 +588,7 @@ function moveTo(nextNode) {
   scatterAlongEdge(edge, 24);
   currentNode = nextNode;
   activeStroke = [];
+  playSound('connect');
   setMessage(`${usedEdges.size} / ${level.edges.length} 간선 사용`);
   checkTerminalState();
   draw();
@@ -829,7 +856,7 @@ document.getElementById('btn-start').addEventListener('click', () => {
 
 resize();
 window.addEventListener('resize', resize);
-resetGame();
+resetGame(false);
 updateTimer();
 </script>
 </body>
