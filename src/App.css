@@ -143,6 +143,14 @@ html, body {
   z-index: 30;
   font-family: 'Black Han Sans', 'Gaegu', sans-serif;
 }
+.topbar-welcome {
+  font-size: 26px;
+  color: rgba(30,20,10,0.8);
+  letter-spacing: 0.3px;
+  font-family: 'Gaegu', sans-serif;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .logo-pill {
   display: flex;
   align-items: center;

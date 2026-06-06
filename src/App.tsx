@@ -31,10 +31,9 @@ const emptyScoreRecords: Record<GameKey, ScoreRecord[]> = {
 }
 
 const CHAR_FRAMES = [
-  { src: '/characters/main_1.png', duration: 2000 },
-  { src: '/characters/main_2.png', duration: 700 },
-  { src: '/characters/main_3.png', duration: 350 },
-  { src: '/characters/main_4.png', duration: 600 },
+  { src: '/characters/scribbling_character.png', duration: 2000 },
+  { src: '/characters/surprised_character.png', duration: 600 },
+  { src: '/characters/running_away_character.png', duration: 800 },
 ]
 
 export default function App() {
@@ -180,18 +179,11 @@ export default function App() {
         </svg>
 
         <div className="topbar">
-          <div className="logo-pill">
-            <div className="dot"></div>
-            <div className="name">우당탕탕</div>
-          </div>
-          <div className="crumb">
-            <div className="pin"></div>
-            <div>3학년 2반 · 5월 20일 (수) · 맑음</div>
+          <div className="topbar-welcome">
+            미니게임 플랫폼 우당탕탕 학교생활에 오신 걸 환영합니다!
           </div>
           <div className="spacer"></div>
-          <div className="iconbtn" title="설정">⚙</div>
           <div className="iconbtn" title="소리">♪</div>
-          <div className="iconbtn" title="프로필">👤</div>
         </div>
 
         <div className="board-wrap">
@@ -261,7 +253,7 @@ export default function App() {
               <img
                 key={charFrame}
                 src={CHAR_FRAMES[charFrame].src}
-                className={`char-anim${charFrame === 3 ? ' char-anim--exit' : ''}`}
+                className={`char-anim${charFrame === 2 ? ' char-anim--exit' : ''}`}
                 alt=""
               />
               <div className="char-shadow"></div>
