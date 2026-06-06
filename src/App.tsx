@@ -249,18 +249,6 @@ export default function App() {
               <span style={{ left: '1160px', top: '590px', fontSize: '48px', animationDelay: '1.7s' }}>✧</span>
             </div>
 
-<<<<<<< HEAD
-            <div className="char-zone">
-              <img
-                key={charFrame}
-                src={CHAR_FRAMES[charFrame].src}
-                className={`char-anim${charFrame === 2 ? ' char-anim--exit' : ''}`}
-                alt=""
-              />
-              <div className="char-shadow"></div>
-            </div>
-=======
->>>>>>> origin/dev
           </div>
 
           <div className="tray">
