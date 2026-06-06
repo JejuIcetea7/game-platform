@@ -36,10 +36,62 @@ const CHAR_FRAMES = [
   { src: '/characters/running_away_character.png', duration: 800 },
 ]
 
+// ── 메인화면 배경음악 ─────────────────────────────────────────────────────────
+type StopFn = () => void
+function startMainBGM(actx: AudioContext): StopFn {
+  const master = actx.createGain(); master.gain.value = 0.18; master.connect(actx.destination)
+  const BPM = 78, B = 60 / BPM
+  // 주파수 테이블
+  const F: Record<string,number> = {
+    C3:130.81,G3:196,A3:220,C4:261.63,D4:293.66,E4:329.63,F4:349.23,
+    G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,G5:783.99,_:0
+  }
+  // 멜로디: 학교종이~느낌의 동요풍 루프
+  const MEL = ['E4','E4','G4','G4','A4','A4','G4','_',
+                'E4','E4','D4','D4','C4','C4','C4','_',
+                'G4','G4','E4','E4','D4','D4','C4','_',
+                'G4','G4','E4','E4','D4','D4','C4','_',
+                'E4','E4','G4','G4','A4','A4','C5','_',
+                'B4','B4','A4','A4','G4','G4','G4','_',
+                'C5','B4','A4','G4','A4','G4','E4','_',
+                'C4','D4','E4','G4','E4','D4','C4','_']
+  const BASS=['C3','_','G3','_','A3','_','G3','_',
+               'C3','_','G3','_','C3','_','_','_',
+               'G3','_','C3','_','G3','_','C3','_',
+               'G3','_','C3','_','G3','_','C3','_',
+               'F4','_','C4','_','F4','_','A3','_',
+               'G3','_','D4','_','G3','_','G3','_',
+               'C4','_','F3','_','C4','_','G3','_',
+               'C3','_','G3','_','C3','_','C3','_']
+  let stopped = false, loop = 0
+  function playNote(freq: number, t: number, dur: number, type: OscillatorType, vol: number) {
+    if(!freq) return
+    const o = actx.createOscillator(), g = actx.createGain()
+    o.connect(g); g.connect(master)
+    o.type = type; o.frequency.value = freq
+    g.gain.setValueAtTime(0, t)
+    g.gain.linearRampToValueAtTime(vol, t+0.02)
+    g.gain.linearRampToValueAtTime(0, t+dur*0.85)
+    o.start(t); o.stop(t+dur)
+  }
+  function schedule() {
+    if(stopped) return
+    const loopLen = MEL.length * B * 0.5
+    const startT = actx.currentTime + 0.05 + loop * loopLen
+    MEL.forEach((n,i) => playNote(F[n]||0, startT+i*B*0.5, B*0.45, 'sine', 0.7))
+    BASS.forEach((n,i) => playNote(F[n]||0, startT+i*B*0.5, B*0.8, 'triangle', 0.4))
+    loop++
+    setTimeout(schedule, (loopLen - 0.2) * 1000)
+  }
+  schedule()
+  return () => { stopped = true }
+}
+
 export default function App() {
   const heroFrameRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLDivElement>(null)
   const [showGame, setShowGame] = useState<null | 'oneLine' | 'lunch' | 'dance'>(null)
+  const bgmRef = useRef<{ actx: AudioContext; stop: StopFn } | null>(null)
   const [scoreRecords, setScoreRecords] = useState(emptyScoreRecords)
   const [charFrame, setCharFrame] = useState(0)
 
@@ -87,6 +139,30 @@ export default function App() {
       if (channel) void supabase?.removeChannel(channel)
     }
   }, [refreshScores])
+
+  // 메인화면일 때만 BGM 재생 (게임 진입 시 정지)
+  useEffect(() => {
+    if (showGame !== null) {
+      bgmRef.current?.stop()
+      bgmRef.current = null
+      return
+    }
+    // 첫 클릭 시 AudioContext 생성 (브라우저 정책)
+    const start = () => {
+      if (bgmRef.current) return
+      const actx = new AudioContext()
+      const stop = startMainBGM(actx)
+      bgmRef.current = { actx, stop }
+      document.removeEventListener('click', start)
+      document.removeEventListener('keydown', start)
+    }
+    document.addEventListener('click', start)
+    document.addEventListener('keydown', start)
+    return () => {
+      document.removeEventListener('click', start)
+      document.removeEventListener('keydown', start)
+    }
+  }, [showGame])
 
   useEffect(() => {
     const heroFrame = heroFrameRef.current!

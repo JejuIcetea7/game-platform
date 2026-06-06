@@ -579,6 +579,69 @@ document.addEventListener('keyup', e => {
   if (e.code === 'ArrowRight') keys.R = false;
 });
 
+// ── 배경음악 (Web Audio API) ─────────────────────────────────────────────
+let audioCtx = null, bgmStopped = false;
+function initAudio() {
+  if(audioCtx) return;
+  audioCtx = new AudioContext();
+  bgmStopped = false;
+  playLunchBGM();
+}
+function playLunchBGM() {
+  const ac = audioCtx;
+  const master = ac.createGain(); master.gain.value = 0.15; master.connect(ac.destination);
+  const BPM = 138, B = 60/BPM;
+  const F = {
+    G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,
+    G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,_:0
+  };
+  // 활기찬 달리기 멜로디 (G장조)
+  const MEL = [
+    'G4','B4','D5','B4','G4','A4','B4','D5',
+    'E5','D5','B4','G4','A4','B4','C5','B4',
+    'G4','A4','B4','D5','E5','D5','C5','B4',
+    'A4','G4','A4','B4','D5','B4','G4','G4',
+  ];
+  const BASS = [
+    'G3','_','G3','_','G3','_','G3','_',
+    'C4','_','C4','_','A3','_','A3','_',
+    'G3','_','G3','_','C4','_','C4','_',
+    'D4','_','D4','_','G3','_','G3','_',
+  ];
+  function note(freq, t, dur, type, vol) {
+    if(!freq||bgmStopped) return;
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(master);
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(vol,t+0.015);
+    g.gain.linearRampToValueAtTime(0,t+dur*0.8);
+    o.start(t); o.stop(t+dur);
+  }
+  function kick(t) {
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g); g.connect(master);
+    o.type='sine'; o.frequency.setValueAtTime(140,t);
+    o.frequency.exponentialRampToValueAtTime(40,t+0.1);
+    g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
+    o.start(t); o.stop(t+0.2);
+  }
+  let loop=0;
+  function schedule() {
+    if(bgmStopped) return;
+    const loopLen = MEL.length * B * 0.5;
+    const s = ac.currentTime + 0.05 + loop * loopLen;
+    MEL.forEach((n,i) => note(F[n]||0, s+i*B*0.5, B*0.42, 'square', 0.3));
+    BASS.forEach((n,i) => note(F[n]||0, s+i*B*0.5, B*0.7, 'triangle', 0.25));
+    // 킥 드럼: 매 박자
+    for(let i=0;i<8;i++) kick(s+i*B);
+    loop++;
+    setTimeout(schedule, (loopLen-0.3)*1000);
+  }
+  schedule();
+}
+function stopBGM() { bgmStopped = true; }
+
 // ── 게임 흐름 ────────────────────────────────────────────────────────────
 const startPanel = document.getElementById('start-panel');
 const gameoverEl = document.getElementById('gameover');
@@ -586,6 +649,7 @@ const goDist     = document.getElementById('go-dist');
 const goRank     = document.getElementById('go-rank');
 
 function startGame() {
+  initAudio();
   G.phase   = 'playing';
   G.bal     =  0.11;
   G.balVel  =  0.30;
@@ -614,6 +678,8 @@ function startGame() {
 }
 
 function resetGame() {
+  bgmStopped = false;
+  playLunchBGM();
   G = mkState();
   gameoverEl.classList.add('hidden');
   startPanel.classList.remove('hidden');
@@ -628,6 +694,7 @@ function triggerFall() {
 }
 
 function showGameOver() {
+  stopBGM();
   gameoverEl.classList.remove('hidden');
   const d = Math.floor(G.dist);
   goDist.textContent = `🏁 ${d}m 달렸어요!`;

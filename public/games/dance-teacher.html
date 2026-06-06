@@ -196,6 +196,130 @@ function resize() {
 }
 resize(); window.addEventListener('resize', resize);
 
+// ── 오디오 엔진 ──────────────────────────────────────────────────────────────
+let AC = null, bgmStop = false;
+function getAC() { if(!AC) AC = new AudioContext(); return AC; }
+
+function sfxNote(freq, dur, type='sine', vol=0.4, t=null) {
+  const ac = getAC(); const st = t ?? ac.currentTime;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.connect(g); g.connect(ac.destination);
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(vol,st+0.01);
+  g.gain.linearRampToValueAtTime(0,st+dur*0.85);
+  o.start(st); o.stop(st+dur);
+}
+function sfxHit(perfect) {
+  const ac=getAC(), t=ac.currentTime;
+  if(perfect){ sfxNote(880,0.06,'sine',0.35,t); sfxNote(1320,0.06,'sine',0.25,t+0.04); }
+  else        { sfxNote(660,0.06,'sine',0.3,t); }
+}
+function sfxMiss() {
+  const ac=getAC(), t=ac.currentTime;
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.connect(g); g.connect(ac.destination);
+  o.type='sawtooth'; o.frequency.setValueAtTime(300,t);
+  o.frequency.exponentialRampToValueAtTime(100,t+0.25);
+  g.gain.setValueAtTime(0.3,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.28);
+  o.start(t); o.stop(t+0.3);
+}
+function sfxWarning() {
+  const ac=getAC(), t=ac.currentTime;
+  [0,0.14,0.28].forEach(d=>{
+    sfxNote(1200,0.08,'square',0.25,t+d);
+    sfxNote(900, 0.08,'square',0.15,t+d+0.04);
+  });
+}
+function sfxCombo(combo) {
+  const ac=getAC(), t=ac.currentTime;
+  const scale=[523,659,784,1047]; // C5 E5 G5 C6
+  scale.forEach((f,i)=>sfxNote(f,0.1,'sine',0.35,t+i*0.08));
+  if(combo>=30) sfxNote(1568,0.15,'sine',0.3,t+0.32); // 고콤보 추가음
+}
+
+// 선생님 뒤돌기 경고 → 사운드 트리거 (tState 변경 시 호출)
+let _lastWarnPlayed = false;
+function checkWarnSFX() {
+  if(G.tState==='warning' && !_lastWarnPlayed){ sfxWarning(); _lastWarnPlayed=true; }
+  if(G.tState==='writing') _lastWarnPlayed=false;
+}
+
+// 배경음악 (펑키 디스코 스타일)
+function startDanceBGM() {
+  const ac=getAC();
+  bgmStop=false;
+  const master=ac.createGain(); master.gain.value=0.14; master.connect(ac.destination);
+  const BPM=118, B=60/BPM;
+  const F={
+    C3:130.81,F3:174.61,G3:196,A3:220,Bb3:233.08,
+    C4:261.63,D4:293.66,Eb4:311.13,E4:329.63,F4:349.23,G4:392,A4:440,Bb4:466.16,
+    C5:523.25,D5:587.33,Eb5:622.25,E5:659.25,F5:698.46,G5:783.99,A5:880,_:0
+  };
+  // 펑키 멜로디 (8박 × 4줄)
+  const MEL=[
+    'E5','_','D5','C5','_','E5','G5','_',
+    'A5','_','G5','E5','_','D5','C5','_',
+    'C5','E5','G5','_','A5','G5','E5','D5',
+    'E5','_','D5','C5','G4','_','C5','_',
+    'F5','_','Eb5','C5','_','F5','A5','_',
+    'Bb4','_','A5','F5','_','Eb5','C5','_',
+    'C5','D5','Eb5','F5','G5','F5','Eb5','D5',
+    'C5','_','G4','_','C5','_','_','_',
+  ];
+  const BASS=[
+    'C3','_','G3','_','C3','_','G3','_',
+    'F3','_','C3','_','G3','_','G3','_',
+    'C3','_','G3','_','F3','_','C3','_',
+    'G3','_','G3','_','C3','_','C3','_',
+    'F3','_','C3','_','F3','_','A3','_',
+    'Bb3','_','F3','_','C3','_','G3','_',
+    'C3','_','F3','_','G3','_','G3','_',
+    'C3','_','C3','_','C3','_','C3','_',
+  ];
+  function note(freq,t,dur,type,vol){
+    if(!freq||bgmStop) return;
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g); g.connect(master);
+    o.type=type; o.frequency.value=freq;
+    g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.01);
+    g.gain.linearRampToValueAtTime(0,t+dur*0.8);
+    o.start(t); o.stop(t+dur);
+  }
+  function hihat(t,vol=0.08){
+    const buf=ac.createBuffer(1,ac.sampleRate*0.04,ac.sampleRate);
+    const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+    const src=ac.createBufferSource(),g=ac.createGain();
+    const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=8000;
+    src.connect(f); f.connect(g); g.connect(master);
+    src.buffer=buf; g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
+    src.start(t); src.stop(t+0.05);
+  }
+  function kick(t){
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g); g.connect(master);
+    o.type='sine'; o.frequency.setValueAtTime(150,t); o.frequency.exponentialRampToValueAtTime(40,t+0.1);
+    g.gain.setValueAtTime(0.45,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.18);
+    o.start(t); o.stop(t+0.2);
+  }
+  let loop=0;
+  function schedule(){
+    if(bgmStop) return;
+    const loopLen=MEL.length*B*0.5;
+    const s=ac.currentTime+0.05+loop*loopLen;
+    MEL.forEach((n,i)=>note(F[n]||0,s+i*B*0.5,B*0.4,'square',0.22));
+    BASS.forEach((n,i)=>note(F[n]||0,s+i*B*0.5,B*0.75,'triangle',0.2));
+    // 드럼
+    for(let i=0;i<8;i++){
+      if(i%2===0) kick(s+i*B);
+      hihat(s+i*B*0.5,0.07);
+    }
+    loop++;
+    setTimeout(schedule,(loopLen-0.3)*1000);
+  }
+  schedule();
+}
+function stopDanceBGM(){ bgmStop=true; }
+
 // ── Images ──────────────────────────────────────────────────────────────────
 function img(src){ const i=new Image(); i.src=src; return i; }
 const IMG = {
@@ -311,10 +435,12 @@ function tryHit(dir) {
     const perfect = bestDist < WIN_PERFECT;
     G.combo++; G.maxCombo = Math.max(G.maxCombo, G.combo);
     G.score += (perfect ? 100 : 50) * Math.ceil(G.combo/5);
+    sfxHit(perfect);
     if(G.combo % 10 === 0) {
       const bonus = G.combo * 50;
       G.score += bonus;
       G.comboMilestone = { combo: G.combo, bonus, life: 2.2 };
+      sfxCombo(G.combo);
     }
     addPopup(perfect?'PERFECT!':'GOOD!', perfect?'#f7b6c4':'#ffe066', cx, HIT_Y-28);
     addHitFx(cx, HIT_Y, DIR_COLOR[dir]);
@@ -324,6 +450,7 @@ function tryHit(dir) {
     if(G.notes.some(n=>n.dir===dir && !n.dead)) {
       G.combo = 0;
       G.stumbleTimer = 1.5;
+      sfxMiss();
       addPopup('MISS', '#e74c3c', cx, HIT_Y-28);
     }
   }
@@ -378,6 +505,7 @@ function update(dt) {
       if(n.y > HIT_Y + WIN_GOOD + 8 && !n.dead) {
         G.combo = 0;
         G.stumbleTimer = 1.5; // show stumble image
+        sfxMiss();
         addPopup('MISS', '#e74c3c', LANE_X[LANE_ORDER.indexOf(n.dir)], HIT_Y-28);
         n.dead = true;
       }
@@ -388,7 +516,7 @@ function update(dt) {
   // Teacher events
   G.tTimer += dt;
   if(G.tState === 'writing') {
-    if(G.tTimer >= G.nextEvent) { G.tState='warning'; G.tTimer=0; }
+    if(G.tTimer >= G.nextEvent) { G.tState='warning'; G.tTimer=0; sfxWarning(); }
   } else if(G.tState === 'warning') {
     if(G.tTimer >= G.warnDur) {
       G.tState = 'turned'; G.tTimer = 0;
@@ -439,6 +567,7 @@ function spawnNote() {
 }
 
 function endGame(type) {
+  stopDanceBGM();
   G.phase = type;
   if(type==='caught') G.caughtFlash = 1;
   const el = document.getElementById('gameover-screen');
@@ -1003,6 +1132,7 @@ function startGame() {
   document.getElementById('intro-screen').classList.remove('active');
   document.getElementById('gameover-screen').classList.remove('active');
   document.getElementById('top-btns').classList.add('visible');
+  startDanceBGM();
 }
 function saveScore() {
   const name=document.getElementById('name-input').value.trim()||'익명';
