@@ -84,19 +84,43 @@ body { font-family: 'Jua', system-ui, sans-serif; color: #f4efe2; }
   background: linear-gradient(180deg, #fff9ee, #eadfc7);
   color: #1a1008;
   box-shadow: 5px 5px 0 #1a1008;
-  padding: 14px 24px;
+  padding: 11px 18px;
   font-family: 'Black Han Sans', sans-serif;
-  font-size: 24px;
+  font-size: 20px;
   cursor: pointer;
 }
 .top-btn:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 #1a1008; }
 #btn-home { left: 18px; }
-#btn-undo { right: 188px; }
-#btn-restart { right: 18px; }
+#btn-undo        { right: 438px; }
+#btn-stage-reset { right: 222px; }
+#btn-restart     { right: 18px; }
+#dev-panel {
+  position: absolute;
+  bottom: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 10px;
+  z-index: 20;
+}
+.dev-btn {
+  border: 2px dashed rgba(241,222,122,.7);
+  background: rgba(26,16,8,.55);
+  color: #f1de7a;
+  padding: 8px 18px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 18px;
+  cursor: pointer;
+  border-radius: 6px;
+  opacity: 0.75;
+}
+.dev-btn:hover { opacity: 1; }
+.dev-btn:active { transform: scale(0.95); }
+.dev-btn.active { border-color: #f1de7a; opacity: 1; background: rgba(241,222,122,.2); }
 #timer {
   position: absolute;
   top: 14px;
-  right: 436px;
+  right: 660px;
   z-index: 5;
   min-width: 190px;
   padding: 12px 24px 11px;
@@ -137,7 +161,7 @@ body { font-family: 'Jua', system-ui, sans-serif; color: #f4efe2; }
   border: 2px dashed rgba(244,239,226,.7);
   background: rgba(26,16,8,.24);
   color: #f4efe2;
-  font-size: 20px;
+  font-size: 28px;
   white-space: nowrap;
   box-shadow: inset 0 0 18px rgba(0,0,0,.2);
 }
@@ -192,17 +216,19 @@ body { font-family: 'Jua', system-ui, sans-serif; color: #f4efe2; }
   <div id="board">
     <button class="top-btn" id="btn-home">← 메인화면</button>
     <div id="timer">00.00초</div>
-    <button class="top-btn" id="btn-undo">되돌리기</button>
-    <button class="top-btn" id="btn-restart">재시작</button>
+    <button class="top-btn" id="btn-undo">직전으로 되돌리기</button>
+    <button class="top-btn" id="btn-stage-reset">스테이지 처음으로</button>
+    <button class="top-btn" id="btn-restart">처음부터 다시하기</button>
     <canvas id="game"></canvas>
     <div id="stage">1교시 칠판 낙서 왕</div>
     <div id="message">노란 시작점을 클릭하세요.</div>
+    <div id="dev-panel"></div>
   </div>
   <div id="intro">
     <div class="intro-card">
       <h1>칠판 낙서 왕</h1>
       <p>
-        7개의 칠판 낙서를 쉬운 것부터 어려운 것까지 완성하세요.<br>
+        5개의 칠판 낙서를 쉬운 것부터 어려운 것까지 완성하세요.<br>
         모든 하얀 선을 정확히 한 번씩 지나가세요.<br>
         꼭짓점은 다시 방문할 수 있지만, 이미 쓴 선은 다시 쓸 수 없어요.<br>
         막다른 곳에 갔는데 남은 선이 있으면 실패입니다.
@@ -266,8 +292,6 @@ const levels = [
       { id: 4, from: 4, to: 0 },
       { id: 5, from: 1, to: 3 },
     ],
-    startNode: null,
-    endNode: null,
   },
   {
     name: '대각선 네모',
@@ -289,8 +313,6 @@ const levels = [
       { id: 7, from: 4, to: 3 },
       { id: 8, from: 0, to: 2 },
     ],
-    startNode: null,
-    endNode: null,
   },
   {
     name: '꼬인 집',
@@ -314,34 +336,6 @@ const levels = [
       { id: 8, from: 0, to: 5 },
       { id: 9, from: 5, to: 4 },
     ],
-    startNode: null,
-    endNode: null,
-  },
-  {
-    name: '나비 매듭',
-    nodes: [
-      { id: 0, x: 350, y: 350 },
-      { id: 1, x: 520, y: 180 },
-      { id: 2, x: 650, y: 328 },
-      { id: 3, x: 780, y: 520 },
-      { id: 4, x: 950, y: 350 },
-      { id: 5, x: 650, y: 520 },
-    ],
-    edges: [
-      { id: 0, from: 0, to: 1 },
-      { id: 1, from: 1, to: 2 },
-      { id: 2, from: 2, to: 0 },
-      { id: 3, from: 2, to: 3 },
-      { id: 4, from: 3, to: 4 },
-      { id: 5, from: 4, to: 2 },
-      { id: 6, from: 0, to: 5 },
-      { id: 7, from: 5, to: 4 },
-      { id: 8, from: 1, to: 5 },
-      { id: 9, from: 5, to: 3 },
-      { id: 10, from: 0, to: 4 },
-    ],
-    startNode: null,
-    endNode: null,
   },
   {
     name: '별표 낙서',
@@ -367,74 +361,31 @@ const levels = [
       { id: 10, from: 2, to: 5 },
       { id: 11, from: 0, to: 2 },
     ],
-    startNode: null,
-    endNode: null,
   },
   {
-    name: '격자 함정',
+    name: '정팔면체',
     nodes: [
-      { id: 0, x: 360, y: 220 },
-      { id: 1, x: 640, y: 220 },
-      { id: 2, x: 920, y: 220 },
-      { id: 3, x: 360, y: 500 },
-      { id: 4, x: 640, y: 500 },
-      { id: 5, x: 920, y: 500 },
-      { id: 6, x: 690, y: 360 },
+      { id: 0, x: 640, y: 115 },
+      { id: 1, x: 920, y: 295 },
+      { id: 2, x: 920, y: 490 },
+      { id: 3, x: 640, y: 605 },
+      { id: 4, x: 360, y: 490 },
+      { id: 5, x: 360, y: 295 },
     ],
     edges: [
-      { id: 0, from: 0, to: 1 },
-      { id: 1, from: 1, to: 2 },
-      { id: 2, from: 3, to: 4 },
-      { id: 3, from: 4, to: 5 },
-      { id: 4, from: 0, to: 3 },
-      { id: 5, from: 1, to: 4 },
-      { id: 6, from: 2, to: 5 },
-      { id: 7, from: 0, to: 4 },
-      { id: 8, from: 1, to: 3 },
-      { id: 9, from: 1, to: 6 },
-      { id: 10, from: 6, to: 4 },
-      { id: 11, from: 3, to: 6 },
-      { id: 12, from: 6, to: 5 },
-      { id: 13, from: 0, to: 5 },
+      { id: 0,  from: 0, to: 1 },
+      { id: 1,  from: 0, to: 2 },
+      { id: 2,  from: 0, to: 4 },
+      { id: 3,  from: 0, to: 5 },
+      { id: 4,  from: 1, to: 2 },
+      { id: 5,  from: 1, to: 3 },
+      { id: 6,  from: 1, to: 5 },
+      { id: 7,  from: 2, to: 3 },
+      { id: 8,  from: 2, to: 4 },
+      { id: 9,  from: 3, to: 4 },
+      { id: 10, from: 3, to: 5 },
+      { id: 11, from: 4, to: 5 },
     ],
-    startNode: null,
-    endNode: null,
-  },
-  {
-    name: '마지막 칠판 별',
-    nodes: [
-      { id: 0, x: 640, y: 110 },
-      { id: 1, x: 840, y: 190 },
-      { id: 2, x: 980, y: 360 },
-      { id: 3, x: 840, y: 530 },
-      { id: 4, x: 640, y: 610 },
-      { id: 5, x: 440, y: 530 },
-      { id: 6, x: 300, y: 360 },
-      { id: 7, x: 440, y: 190 },
-      { id: 8, x: 640, y: 360 },
-    ],
-    edges: [
-      { id: 0, from: 0, to: 1 },
-      { id: 1, from: 1, to: 2 },
-      { id: 2, from: 2, to: 3 },
-      { id: 3, from: 3, to: 4 },
-      { id: 4, from: 4, to: 5 },
-      { id: 5, from: 5, to: 6 },
-      { id: 6, from: 6, to: 7 },
-      { id: 7, from: 7, to: 0 },
-      { id: 8, from: 0, to: 4 },
-      { id: 9, from: 4, to: 2 },
-      { id: 10, from: 2, to: 6 },
-      { id: 11, from: 6, to: 0 },
-      { id: 12, from: 1, to: 8 },
-      { id: 13, from: 8, to: 5 },
-      { id: 14, from: 7, to: 8 },
-      { id: 15, from: 8, to: 3 },
-      { id: 16, from: 1, to: 3 },
-      { id: 17, from: 5, to: 7 },
-    ],
-    startNode: null,
-    endNode: null,
   },
 ];
 
@@ -501,12 +452,12 @@ function loadStage(index, resetClock = false, playStartSound = true) {
   }
   stageEl.textContent = `${currentLevelIndex + 1}/${levels.length}단계 · ${level.name}`;
   setMessage('노란 시작점을 클릭하세요.');
+  if (typeof updateDevPanel === 'function') updateDevPanel();
   if (playStartSound) playSound('stageStart');
   draw();
 }
 
 function allowedStartNodes() {
-  if (level.startNode !== null) return [level.startNode];
   if (levelInfo.oddNodes.length === 2) return levelInfo.oddNodes;
   return level.nodes.map(node => node.id);
 }
@@ -535,28 +486,6 @@ function neighbors(nodeId) {
   return unusedEdgesFrom(nodeId).map(edge => edge.from === nodeId ? edge.to : edge.from);
 }
 
-function distanceToSegment(point, from, to) {
-  const dx = to.x - from.x;
-  const dy = to.y - from.y;
-  const lengthSq = dx * dx + dy * dy;
-  if (!lengthSq) return Math.hypot(point.x - from.x, point.y - from.y);
-  const t = Math.max(0, Math.min(1, ((point.x - from.x) * dx + (point.y - from.y) * dy) / lengthSq));
-  const x = from.x + dx * t;
-  const y = from.y + dy * t;
-  return Math.hypot(point.x - x, point.y - y);
-}
-
-function strokeFitsEdge(edge) {
-  const from = nodeById(edge.from);
-  const to = nodeById(edge.to);
-  const tolerance = 54;
-  return activeStroke.every(point => distanceToSegment(point, from, to) <= tolerance);
-}
-
-function usedEdgeCountForNode(nodeId) {
-  return path.reduce((count, move) => count + (move.from === nodeId || move.to === nodeId ? 1 : 0), 0);
-}
-
 function getPos(event) {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -565,7 +494,7 @@ function getPos(event) {
   };
 }
 
-function nearestNode(pos, limit = 36) {
+function nearestNode(pos, limit = 46) {
   let best = null;
   let bestDist = limit;
   level.nodes.forEach(node => {
@@ -608,7 +537,7 @@ function checkTerminalState() {
     burstAtNode(currentNode, '#f1de7a', 56);
     if (currentLevelIndex === levels.length - 1) {
       gameState = 'SUCCESS';
-      setMessage(`ALL CLEAR! 7단계 완성 - ${elapsed.toFixed(2)}초`, 'clear');
+      setMessage(`ALL CLEAR! 5단계 완성 - ${elapsed.toFixed(2)}초`, 'clear');
       playSound('clear');
     } else {
       gameState = 'STAGE_CLEAR';
@@ -624,10 +553,12 @@ function checkTerminalState() {
 
   if (currentNode !== null && unusedEdgesFrom(currentNode).length === 0) {
     gameState = 'FAIL';
+    // 타이머 멈춤: FAIL 시점의 elapsed 고정
+    if (startTime) elapsed = (performance.now() - startTime) / 1000;
     isPointerDown = false;
     pointer = null;
     burstAtNode(currentNode, '#f7b6c4', 34);
-    setMessage('FAIL! 현재 노드에서 갈 수 있는 미사용 선이 없습니다.', 'fail');
+    setMessage('막혔어요! 되돌리기 버튼으로 이전 경로로 돌아갈 수 있어요.', 'fail');
     playSound('fail');
     draw();
   }
@@ -650,14 +581,7 @@ function moveTo(nextNode) {
   if (gameState !== 'PLAYING' || currentNode === null || nextNode === currentNode) return;
 
   const edge = edgeBetween(currentNode, nextNode);
-  if (!edge) {
-    setMessage('인접 노드로만 이동할 수 있어요.', 'warn');
-    return;
-  }
-  if (usedEdges.has(edge.id)) {
-    setMessage('이미 사용한 간선은 무시됩니다.', 'warn');
-    return;
-  }
+  if (!edge || usedEdges.has(edge.id)) return;
 
   usedEdges.add(edge.id);
   path.push({ edgeId: edge.id, from: currentNode, to: nextNode });
@@ -683,6 +607,8 @@ function undoMove() {
   usedEdges.delete(last.edgeId);
   currentNode = last.from;
   gameState = 'PLAYING';
+  // FAIL 시간 제외하고 타이머 재동기화
+  if (startTime) startTime = performance.now() - elapsed * 1000;
   setMessage(`되돌림: ${usedEdges.size} / ${level.edges.length} 간선 사용`);
   draw();
 }
@@ -825,15 +751,23 @@ function draw() {
   level.nodes.forEach(node => {
     const isCurrent = node.id === currentNode;
     const isStartCandidate = gameState === 'IDLE' && startNodes.includes(node.id);
-    const isVisited = usedEdgeCountForNode(node.id) > 0;
+    const isNeighbor = gameState === 'PLAYING' && neighbors(currentNode).includes(node.id);
+    const isVisited = path.some(move => move.from === node.id || move.to === node.id);
+
     ctx.save();
     ctx.beginPath();
-    ctx.fillStyle = isCurrent || isStartCandidate ? '#f1de7a' : isVisited ? '#a6c9e2' : '#f4efe2';
+
+    let fillColor = '#f4efe2';
+    if (isCurrent || isStartCandidate) fillColor = '#f1de7a';
+    else if (isNeighbor) fillColor = '#a6e2b8';
+    else if (isVisited) fillColor = '#a6c9e2';
+
+    ctx.fillStyle = fillColor;
     ctx.strokeStyle = '#1a1008';
     ctx.lineWidth = 4;
-    ctx.shadowColor = isCurrent || isStartCandidate ? 'rgba(241,222,122,.9)' : 'rgba(244,239,226,.28)';
-    ctx.shadowBlur = isCurrent || isStartCandidate ? 18 : 7;
-    ctx.arc(node.x, node.y, isCurrent ? 17 : isStartCandidate ? 15 : 12, 0, Math.PI * 2);
+    ctx.shadowColor = isCurrent || isStartCandidate ? 'rgba(241,222,122,.9)' : isNeighbor ? 'rgba(166,226,184,.8)' : 'rgba(244,239,226,.28)';
+    ctx.shadowBlur = isCurrent || isStartCandidate ? 18 : isNeighbor ? 14 : 7;
+    ctx.arc(node.x, node.y, isCurrent ? 17 : isStartCandidate || isNeighbor ? 15 : 12, 0, Math.PI * 2);
     ctx.fill();
     ctx.stroke();
     ctx.restore();
@@ -846,13 +780,12 @@ canvas.addEventListener('pointerdown', event => {
   if (gameState === 'SUCCESS' || gameState === 'STAGE_CLEAR' || gameState === 'FAIL') return;
   const pos = getPos(event);
   const targetNode = nearestNode(pos);
+
+  // 빈 공간 클릭: 무시
   if (targetNode === null) return;
 
-  if (gameState === 'PLAYING' && targetNode !== currentNode) {
-    setMessage('현재 노란 점에서 선을 그어주세요.', 'warn');
-    draw();
-    return;
-  }
+  // PLAYING 중 현재 노드가 아닌 곳 클릭: 무시
+  if (gameState === 'PLAYING' && targetNode !== currentNode) return;
 
   canvas.setPointerCapture(event.pointerId);
   isPointerDown = true;
@@ -875,16 +808,12 @@ canvas.addEventListener('pointermove', event => {
   pointer = getPos(event);
   activeStroke.push(pointer);
   if (Math.random() < 0.35) spawnParticle(pointer.x, pointer.y, '#f1de7a', 0.75);
+
+  // 인접 노드에 닿으면 경로 판정 없이 바로 이동
   const targetNode = nearestNode(pointer);
   if (targetNode !== null && neighbors(currentNode).includes(targetNode)) {
-    const edge = edgeBetween(currentNode, targetNode);
-    if (edge && strokeFitsEdge(edge)) {
-      moveTo(targetNode);
-      if (gameState === 'PLAYING') activeStroke = [nodeById(currentNode)];
-    } else {
-      setMessage('밑그림 선을 따라 그려주세요.', 'warn');
-      activeStroke = [nodeById(currentNode)];
-    }
+    moveTo(targetNode);
+    if (gameState === 'PLAYING') activeStroke = [nodeById(currentNode)];
   }
   draw();
 });
@@ -896,10 +825,29 @@ canvas.addEventListener('pointerup', () => {
   draw();
 });
 
+const devPanel = document.getElementById('dev-panel');
+levels.forEach((lv, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'dev-btn' + (i === 0 ? ' active' : '');
+  btn.textContent = `${i + 1}. ${lv.name}`;
+  btn.addEventListener('click', () => {
+    loadStage(i, true);
+    devPanel.querySelectorAll('.dev-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+  });
+  devPanel.appendChild(btn);
+});
+
+function updateDevPanel() {
+  devPanel.querySelectorAll('.dev-btn').forEach((b, j) => b.classList.toggle('active', j === currentLevelIndex));
+}
+
+const _origLoadStage = loadStage;
+
 document.getElementById('btn-home').addEventListener('click', () => {
   window.parent.postMessage({ type: 'closeGame' }, '*');
 });
 document.getElementById('btn-undo').addEventListener('click', undoMove);
+document.getElementById('btn-stage-reset').addEventListener('click', () => loadStage(currentLevelIndex, true));
 document.getElementById('btn-restart').addEventListener('click', resetGame);
 document.getElementById('btn-start').addEventListener('click', () => {
   intro.classList.add('hidden');
