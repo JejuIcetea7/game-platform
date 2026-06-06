@@ -579,68 +579,154 @@ document.addEventListener('keyup', e => {
   if (e.code === 'ArrowRight') keys.R = false;
 });
 
-// ── 배경음악 (Web Audio API) ─────────────────────────────────────────────
+// ── 오디오 엔진 ──────────────────────────────────────────────────────────────
 let audioCtx = null, bgmStopped = false;
+let bgmNextBeat = 0, bgmBeatIdx = 0; // 가변템포 스케줄러용
+const BGM_MASTER_VOL = 0.15;
+
 function initAudio() {
   if(audioCtx) return;
   audioCtx = new AudioContext();
-  bgmStopped = false;
-  playLunchBGM();
 }
-function playLunchBGM() {
+
+// 주파수 테이블
+const BF = {
+  G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,F4:349.23,
+  G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,F5:698.46,_:0
+};
+// 레이스 멜로디 (G장조, 32스텝)
+const BGM_MEL = [
+  'G4','B4','D5','_','B4','D5','G5','_',
+  'F5','E5','D5','B4','_','D5','E5','_',
+  'G4','A4','B4','D5','E5','_','D5','B4',
+  'A4','_','G4','A4','B4','D5','G4','_',
+];
+const BGM_BASS = [
+  'G3','_','G3','_','G3','_','B3','_',
+  'C4','_','C4','_','A3','_','A3','_',
+  'G3','_','G3','_','C4','_','C4','_',
+  'D4','_','D4','_','G3','_','G3','_',
+];
+
+function bgmNote(freq, t, dur, type, vol) {
+  if(!freq||bgmStopped||!audioCtx) return;
+  const ac=audioCtx;
+  const o=ac.createOscillator(), g=ac.createGain();
+  o.connect(g); g.connect(ac.destination);
+  o.type=type; o.frequency.value=freq;
+  g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(vol,t+0.012);
+  g.gain.linearRampToValueAtTime(0,t+dur*0.82);
+  o.start(t); o.stop(t+dur);
+}
+function bgmKick(t) {
+  if(!audioCtx||bgmStopped) return;
+  const ac=audioCtx;
+  const o=ac.createOscillator(),g=ac.createGain();
+  o.connect(g); g.connect(ac.destination); o.type='sine';
+  o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(40,t+0.1);
+  g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.16);
+  o.start(t); o.stop(t+0.18);
+}
+function bgmHihat(t, vol) {
+  if(!audioCtx||bgmStopped) return;
+  const ac=audioCtx;
+  const buf=ac.createBuffer(1,Math.floor(ac.sampleRate*0.04),ac.sampleRate);
+  const d=buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1);
+  const src=ac.createBufferSource(),g=ac.createGain(),f=ac.createBiquadFilter();
+  f.type='highpass'; f.frequency.value=9000;
+  src.connect(f); f.connect(g); g.connect(ac.destination);
+  src.buffer=buf; g.gain.setValueAtTime(vol,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.04);
+  src.start(t); src.stop(t+0.05);
+}
+
+// ── 가변 템포 BGM 스케줄러 (lookahead clock 방식) ────────────────────────
+const BGM_LOOKAHEAD = 0.12; // 초 앞서 스케줄
+const BGM_SCHEDULE_MS = 50; // ms마다 체크
+let bgmTimerId = null;
+
+function currentBPM() {
+  // 게임 속도에 따라 BPM 변화: 110 → 190
+  if(!G || G.phase !== 'playing') return 110;
+  const ratio = Math.min(1, (G.spd - K.BASE_SPD) / (K.MAX_SPD - K.BASE_SPD));
+  return 110 + ratio * 80;
+}
+
+function scheduleBGM() {
+  if(bgmStopped || !audioCtx) return;
   const ac = audioCtx;
-  const master = ac.createGain(); master.gain.value = 0.15; master.connect(ac.destination);
-  const BPM = 138, B = 60/BPM;
-  const F = {
-    G3:196,A3:220,B3:246.94,C4:261.63,D4:293.66,E4:329.63,
-    G4:392,A4:440,B4:493.88,C5:523.25,D5:587.33,E5:659.25,_:0
-  };
-  // 활기찬 달리기 멜로디 (G장조)
-  const MEL = [
-    'G4','B4','D5','B4','G4','A4','B4','D5',
-    'E5','D5','B4','G4','A4','B4','C5','B4',
-    'G4','A4','B4','D5','E5','D5','C5','B4',
-    'A4','G4','A4','B4','D5','B4','G4','G4',
-  ];
-  const BASS = [
-    'G3','_','G3','_','G3','_','G3','_',
-    'C4','_','C4','_','A3','_','A3','_',
-    'G3','_','G3','_','C4','_','C4','_',
-    'D4','_','D4','_','G3','_','G3','_',
-  ];
-  function note(freq, t, dur, type, vol) {
-    if(!freq||bgmStopped) return;
-    const o=ac.createOscillator(), g=ac.createGain();
-    o.connect(g); g.connect(master);
-    o.type=type; o.frequency.value=freq;
-    g.gain.setValueAtTime(0,t);
-    g.gain.linearRampToValueAtTime(vol,t+0.015);
-    g.gain.linearRampToValueAtTime(0,t+dur*0.8);
-    o.start(t); o.stop(t+dur);
+  const bpm = currentBPM();
+  const step = (60/bpm) * 0.5; // 8분음표 길이
+  const len = BGM_MEL.length;
+
+  while(bgmNextBeat < ac.currentTime + BGM_LOOKAHEAD) {
+    const i = bgmBeatIdx % len;
+    const t = bgmNextBeat;
+    bgmNote(BF[BGM_MEL[i]]||0, t, step*0.78, 'square',   0.24);
+    bgmNote(BF[BGM_BASS[i]]||0, t, step*0.9, 'triangle', 0.18);
+    // 킥: 첫 박 + 중간 박
+    if(i%8===0 || i%8===4) bgmKick(t);
+    // 하이햇: 짝수 스텝
+    if(i%2===0) bgmHihat(t, 0.08);
+    bgmNextBeat += step;
+    bgmBeatIdx++;
   }
-  function kick(t) {
-    const o=ac.createOscillator(),g=ac.createGain();
-    o.connect(g); g.connect(master);
-    o.type='sine'; o.frequency.setValueAtTime(140,t);
-    o.frequency.exponentialRampToValueAtTime(40,t+0.1);
-    g.gain.setValueAtTime(0.5,t); g.gain.exponentialRampToValueAtTime(0.001,t+0.15);
-    o.start(t); o.stop(t+0.2);
-  }
-  let loop=0;
-  function schedule() {
-    if(bgmStopped) return;
-    const loopLen = MEL.length * B * 0.5;
-    const s = ac.currentTime + 0.05 + loop * loopLen;
-    MEL.forEach((n,i) => note(F[n]||0, s+i*B*0.5, B*0.42, 'square', 0.3));
-    BASS.forEach((n,i) => note(F[n]||0, s+i*B*0.5, B*0.7, 'triangle', 0.25));
-    // 킥 드럼: 매 박자
-    for(let i=0;i<8;i++) kick(s+i*B);
-    loop++;
-    setTimeout(schedule, (loopLen-0.3)*1000);
-  }
-  schedule();
+  bgmTimerId = setTimeout(scheduleBGM, BGM_SCHEDULE_MS);
 }
-function stopBGM() { bgmStopped = true; }
+
+function startBGM() {
+  if(!audioCtx) return;
+  bgmStopped = false;
+  bgmNextBeat = audioCtx.currentTime + 0.4; // 휘슬 후 시작 (0.4s 딜레이)
+  bgmBeatIdx = 0;
+  scheduleBGM();
+}
+
+function stopBGM() {
+  bgmStopped = true;
+  if(bgmTimerId) { clearTimeout(bgmTimerId); bgmTimerId = null; }
+}
+
+// ── 효과음 ───────────────────────────────────────────────────────────────────
+function sfxWhistle() {
+  if(!audioCtx) return;
+  const ac = audioCtx, t = ac.currentTime + 0.05;
+  // 삐이익~ 휘슬 (두 번)
+  function toot(st, freq1, freq2, dur, vol) {
+    const o=ac.createOscillator(), g=ac.createGain();
+    o.connect(g); g.connect(ac.destination); o.type='sine';
+    o.frequency.setValueAtTime(freq1, st);
+    o.frequency.linearRampToValueAtTime(freq2, st+dur*0.6);
+    o.frequency.linearRampToValueAtTime(freq1*0.98, st+dur);
+    g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(vol,st+0.015);
+    g.gain.setValueAtTime(vol,st+dur*0.85); g.gain.linearRampToValueAtTime(0,st+dur+0.02);
+    o.start(st); o.stop(st+dur+0.05);
+  }
+  toot(t,      2400, 2800, 0.18, 0.55); // 짧게
+  toot(t+0.25, 2200, 3000, 0.32, 0.65); // 길게~
+}
+
+function sfxGameOver() {
+  if(!audioCtx) return;
+  const ac = audioCtx, t = ac.currentTime + 0.05;
+  // 가격은 얼마일까요 지는 효과음 (내려가는 호른)
+  [[392,0],[349,0.22],[311,0.44],[261,0.66]].forEach(([f,d]) => {
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g); g.connect(ac.destination); o.type='sawtooth';
+    o.frequency.setValueAtTime(f,t+d);
+    g.gain.setValueAtTime(0,t+d); g.gain.linearRampToValueAtTime(0.32,t+d+0.02);
+    g.gain.linearRampToValueAtTime(0,t+d+0.2);
+    o.start(t+d); o.stop(t+d+0.22);
+  });
+  // 쿵 (낙하음)
+  setTimeout(()=>{
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.connect(g); g.connect(ac.destination); o.type='sine';
+    o.frequency.setValueAtTime(120,ac.currentTime);
+    o.frequency.exponentialRampToValueAtTime(30,ac.currentTime+0.3);
+    g.gain.setValueAtTime(0.5,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.001,ac.currentTime+0.35);
+    o.start(ac.currentTime); o.stop(ac.currentTime+0.4);
+  }, 900);
+}
 
 // ── 게임 흐름 ────────────────────────────────────────────────────────────
 const startPanel = document.getElementById('start-panel');
@@ -650,6 +736,8 @@ const goRank     = document.getElementById('go-rank');
 
 function startGame() {
   initAudio();
+  sfxWhistle();
+  setTimeout(startBGM, 380); // 휘슬 끝나고 BGM 시작
   G.phase   = 'playing';
   G.bal     =  0.11;
   G.balVel  =  0.30;
@@ -678,8 +766,6 @@ function startGame() {
 }
 
 function resetGame() {
-  bgmStopped = false;
-  playLunchBGM();
   G = mkState();
   gameoverEl.classList.add('hidden');
   startPanel.classList.remove('hidden');
@@ -695,6 +781,7 @@ function triggerFall() {
 
 function showGameOver() {
   stopBGM();
+  sfxGameOver();
   gameoverEl.classList.remove('hidden');
   const d = Math.floor(G.dist);
   goDist.textContent = `🏁 ${d}m 달렸어요!`;

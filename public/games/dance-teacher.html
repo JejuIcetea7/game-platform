@@ -236,6 +236,30 @@ function sfxCombo(combo) {
   scale.forEach((f,i)=>sfxNote(f,0.1,'sine',0.35,t+i*0.08));
   if(combo>=30) sfxNote(1568,0.15,'sine',0.3,t+0.32); // 고콤보 추가음
 }
+function sfxGameOverDance(caught) {
+  const ac=getAC(), t=ac.currentTime;
+  if(caught) {
+    // 걸렸다! - 경보음 + 하강 아르페지오
+    [880,784,698,587,523].forEach((f,i)=>sfxNote(f,0.14,'square',0.28,t+i*0.1));
+    // 선생님 호루라기
+    setTimeout(()=>{
+      const st=ac.currentTime;
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.connect(g); g.connect(ac.destination); o.type='sine';
+      o.frequency.setValueAtTime(2600,st); o.frequency.linearRampToValueAtTime(2900,st+0.12);
+      o.frequency.linearRampToValueAtTime(2500,st+0.25);
+      g.gain.setValueAtTime(0,st); g.gain.linearRampToValueAtTime(0.55,st+0.01);
+      g.gain.linearRampToValueAtTime(0,st+0.28);
+      o.start(st); o.stop(st+0.3);
+    }, 600);
+  } else {
+    // 수업 종료! - 학교 종소리 느낌
+    [523,659,784,659,523,784,523].forEach((f,i)=>{
+      sfxNote(f,0.18,'sine',0.32,t+i*0.14);
+    });
+    sfxNote(1047,0.4,'sine',0.28,t+0.7); // 마지막 높은 음
+  }
+}
 
 // 선생님 뒤돌기 경고 → 사운드 트리거 (tState 변경 시 호출)
 let _lastWarnPlayed = false;
@@ -568,6 +592,7 @@ function spawnNote() {
 
 function endGame(type) {
   stopDanceBGM();
+  sfxGameOverDance(type==='caught');
   G.phase = type;
   if(type==='caught') G.caughtFlash = 1;
   const el = document.getElementById('gameover-screen');
