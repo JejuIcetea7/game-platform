@@ -451,9 +451,39 @@ html, body {
   position: relative;
   transition: transform .15s ease, background .15s ease;
 }
+.row::before {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  left: 20px;
+  right: 20px;
+  height: 3px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(244,239,226,.28) 10%,
+    rgba(244,239,226,.22) 50%,
+    rgba(244,239,226,.28) 90%,
+    transparent
+  );
+  transition: background .2s ease, bottom .15s ease, left .15s ease, right .15s ease;
+  pointer-events: none;
+}
 .row:hover {
-  background: rgba(244,239,226,.06);
+  background: rgba(244,239,226,.09);
   transform: translateY(-3px) rotate(-.3deg);
+}
+.row:hover::before {
+  background: linear-gradient(90deg,
+    transparent,
+    rgba(241,222,122,.80) 8%,
+    rgba(241,222,122,.62) 50%,
+    rgba(241,222,122,.80) 92%,
+    transparent
+  );
+  bottom: 2px;
+  left: 8px;
+  right: 8px;
 }
 .row:hover .check { opacity: 1; transform: scale(1) rotate(-8deg); }
 .row .num {
