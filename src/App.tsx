@@ -164,6 +164,7 @@ export default function App() {
   const canvasRef = useRef<HTMLDivElement>(null)
   const [showGame, setShowGame] = useState<null | 'oneLine' | 'lunch' | 'dance'>(null)
   const bgmRef = useRef<{ actx: AudioContext; stop: StopFn } | null>(null)
+  const [bgmOn, setBgmOn] = useState(true)
   const [scoreRecords, setScoreRecords] = useState(emptyScoreRecords)
   const [charFrame, setCharFrame] = useState(0)
 
@@ -212,14 +213,15 @@ export default function App() {
     }
   }, [refreshScores])
 
-  // 메인화면일 때만 BGM 재생 (게임 진입 시 정지)
+  // 메인화면일 때만 BGM 재생 (게임 진입 / 음소거 시 정지)
   useEffect(() => {
-    if (showGame !== null) {
+    // 게임 진입 또는 음소거 → 즉시 정지
+    if (showGame !== null || !bgmOn) {
       bgmRef.current?.stop()
       bgmRef.current = null
       return
     }
-    // 첫 클릭 시 AudioContext 생성 (브라우저 정책)
+    // bgmOn=true & 메인화면: 첫 상호작용 후 시작 (브라우저 정책)
     const start = () => {
       if (bgmRef.current) return
       const actx = new AudioContext()
@@ -234,7 +236,7 @@ export default function App() {
       document.removeEventListener('click', start)
       document.removeEventListener('keydown', start)
     }
-  }, [showGame])
+  }, [showGame, bgmOn])
 
   useEffect(() => {
     const heroFrame = heroFrameRef.current!
@@ -331,7 +333,13 @@ export default function App() {
             미니게임 플랫폼 우당탕탕 학교생활에 오신 걸 환영합니다!
           </div>
           <div className="spacer"></div>
-          <div className="iconbtn" title="소리">♪</div>
+          <div
+            className={`iconbtn${bgmOn ? '' : ' iconbtn--muted'}`}
+            title={bgmOn ? '음악 끄기' : '음악 켜기'}
+            onClick={() => setBgmOn(v => !v)}
+          >
+            {bgmOn ? '♪' : '✕'}
+          </div>
         </div>
 
         <div className="board-wrap">

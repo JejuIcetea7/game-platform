@@ -199,6 +199,8 @@ html, body {
 }
 .iconbtn:hover { transform: translate(-2px,-2px); box-shadow: 6px 6px 0 var(--ink); }
 .iconbtn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
+.iconbtn--muted { background: #d0c8b8; color: #888; box-shadow: 4px 4px 0 #999; font-size: 22px; }
+.iconbtn--muted:hover { box-shadow: 6px 6px 0 #999; }
 
 /* ---------- chalkboard frame (wood) ---------- */
 .board-wrap {
