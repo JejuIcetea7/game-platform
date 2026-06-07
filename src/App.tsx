@@ -338,7 +338,7 @@ export default function App() {
             title={bgmOn ? '음악 끄기' : '음악 켜기'}
             onClick={() => setBgmOn(v => !v)}
           >
-            {bgmOn ? '♪' : '✕'}
+            ♪
           </div>
         </div>
 
