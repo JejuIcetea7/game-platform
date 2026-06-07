@@ -201,16 +201,6 @@ html, body {
 .iconbtn:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 var(--ink); }
 .iconbtn--muted { background: #d0c8b8; color: #888; box-shadow: 4px 4px 0 #999; }
 .iconbtn--muted:hover { box-shadow: 6px 6px 0 #999; }
-.iconbtn--muted::after {
-  content: '';
-  position: absolute;
-  width: 44px; height: 3px;
-  background: #888;
-  transform: rotate(-45deg);
-  border-radius: 2px;
-  pointer-events: none;
-}
-.iconbtn { position: relative; }
 
 /* ---------- chalkboard frame (wood) ---------- */
 .board-wrap {
