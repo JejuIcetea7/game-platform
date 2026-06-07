@@ -168,6 +168,114 @@ body { font-family: 'Jua', system-ui, sans-serif; color: #f4efe2; }
 #message.warn { color: #f7b6c4; }
 #message.clear { color: #f1de7a; }
 #message.fail { color: #ff8f8f; }
+#success-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(250,243,227,.96);
+  color: #1a1008;
+}
+#success-overlay.hidden { display: none; }
+.success-card {
+  width: min(560px, 86%);
+  border: 4px solid #1a1008;
+  background: #faf3e3;
+  box-shadow: 8px 8px 0 #1a1008;
+  padding: 34px 44px;
+  text-align: center;
+}
+.success-card h2 {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 42px;
+  line-height: 1.1;
+  text-shadow: 3px 3px 0 #f1de7a;
+  margin-bottom: 8px;
+}
+#success-time {
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 28px;
+  color: #c8362c;
+  margin-bottom: 20px;
+}
+#btn-record {
+  display: block;
+  width: 100%;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 17px;
+  letter-spacing: 1px;
+  padding: 10px 28px;
+  background: #faf3e3;
+  color: #1a1008;
+  border: 2.5px solid #1a1008;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.2);
+  margin-bottom: 10px;
+  transition: transform .08s;
+}
+#btn-record:hover { transform: translate(-1px,-1px); }
+#record-form { display: none; margin-bottom: 10px; }
+#name-input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: 'Jua', sans-serif;
+  font-size: 16px;
+  border: 2.5px solid #1a1008;
+  border-radius: 0;
+  background: #faf3e3;
+  color: #1a1008;
+  box-shadow: 2px 2px 0 rgba(0,0,0,.15);
+  outline: none;
+  margin-bottom: 8px;
+}
+#btn-record-confirm {
+  display: block;
+  width: 100%;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 16px;
+  letter-spacing: 1px;
+  padding: 9px;
+  background: #1a1008;
+  color: #faf3e3;
+  border: 2px solid #1a1008;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.25);
+  margin-bottom: 8px;
+  transition: transform .08s;
+}
+#btn-record-confirm:hover { transform: translate(-1px,-1px); }
+#record-done {
+  display: none;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 16px;
+  color: #1a1008;
+  text-align: center;
+  padding: 10px;
+  border: 2px solid #1a1008;
+  background: #faf3e3;
+  margin-bottom: 10px;
+  letter-spacing: 1px;
+}
+.success-btn-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 14px;
+}
+.success-btn-row button {
+  flex: 1;
+  border: 3px solid #1a1008;
+  background: #faf3e3;
+  color: #1a1008;
+  box-shadow: 4px 4px 0 #1a1008;
+  padding: 10px;
+  font-family: 'Black Han Sans', sans-serif;
+  font-size: 18px;
+  cursor: pointer;
+  transition: transform .08s;
+}
+.success-btn-row button:active { transform: translate(2px,2px); box-shadow: 1px 1px 0 #1a1008; }
 #intro {
   position: absolute;
   inset: 0;
@@ -223,6 +331,24 @@ body { font-family: 'Jua', system-ui, sans-serif; color: #f4efe2; }
     <div id="stage">1교시 칠판 낙서 왕</div>
     <div id="message">노란 시작점을 클릭하세요.</div>
     <div id="dev-panel"></div>
+  </div>
+  <div id="success-overlay" class="hidden">
+    <div class="success-card">
+      <h2>ALL CLEAR!</h2>
+      <div id="success-time"></div>
+      <div id="record-section">
+        <button id="btn-record">🏆 명예의 전당에 기록하기</button>
+        <div id="record-form">
+          <input id="name-input" type="text" maxlength="8" placeholder="닉네임 (최대 8자)" autocomplete="off">
+          <button id="btn-record-confirm">등록!</button>
+        </div>
+        <div id="record-done">✅ 명예의 전당에 기록됐어요!</div>
+      </div>
+      <div class="success-btn-row">
+        <button id="btn-success-restart">처음부터</button>
+        <button id="btn-success-home">← 메인으로</button>
+      </div>
+    </div>
   </div>
   <div id="intro">
     <div class="intro-card">
@@ -294,24 +420,23 @@ const levels = [
     ],
   },
   {
-    name: '대각선 네모',
+    name: '산타의 집',
     nodes: [
-      { id: 0, x: 410, y: 220 },
-      { id: 1, x: 870, y: 220 },
-      { id: 2, x: 870, y: 500 },
-      { id: 3, x: 410, y: 500 },
-      { id: 4, x: 640, y: 382 },
+      { id: 0, x: 380, y: 520 },
+      { id: 1, x: 900, y: 520 },
+      { id: 2, x: 900, y: 280 },
+      { id: 3, x: 380, y: 280 },
+      { id: 4, x: 640, y: 120 },
     ],
     edges: [
       { id: 0, from: 0, to: 1 },
-      { id: 1, from: 1, to: 2 },
-      { id: 2, from: 2, to: 3 },
-      { id: 3, from: 3, to: 0 },
-      { id: 4, from: 0, to: 4 },
-      { id: 5, from: 4, to: 2 },
-      { id: 6, from: 1, to: 4 },
-      { id: 7, from: 4, to: 3 },
-      { id: 8, from: 0, to: 2 },
+      { id: 1, from: 0, to: 3 },
+      { id: 2, from: 1, to: 2 },
+      { id: 3, from: 2, to: 3 },
+      { id: 4, from: 3, to: 4 },
+      { id: 5, from: 2, to: 4 },
+      { id: 6, from: 0, to: 2 },
+      { id: 7, from: 1, to: 3 },
     ],
   },
   {
@@ -363,28 +488,35 @@ const levels = [
     ],
   },
   {
-    name: '정팔면체',
+    name: '오각별',
     nodes: [
-      { id: 0, x: 640, y: 115 },
-      { id: 1, x: 920, y: 295 },
-      { id: 2, x: 920, y: 490 },
-      { id: 3, x: 640, y: 605 },
-      { id: 4, x: 360, y: 490 },
-      { id: 5, x: 360, y: 295 },
+      { id: 0, x: 640, y: 90 },
+      { id: 1, x: 897, y: 277 },
+      { id: 2, x: 799, y: 578 },
+      { id: 3, x: 481, y: 578 },
+      { id: 4, x: 383, y: 277 },
+      { id: 5, x: 580, y: 277 },
+      { id: 6, x: 700, y: 277 },
+      { id: 7, x: 738, y: 392 },
+      { id: 8, x: 640, y: 463 },
+      { id: 9, x: 542, y: 392 },
     ],
     edges: [
-      { id: 0,  from: 0, to: 1 },
-      { id: 1,  from: 0, to: 2 },
-      { id: 2,  from: 0, to: 4 },
-      { id: 3,  from: 0, to: 5 },
-      { id: 4,  from: 1, to: 2 },
-      { id: 5,  from: 1, to: 3 },
-      { id: 6,  from: 1, to: 5 },
-      { id: 7,  from: 2, to: 3 },
-      { id: 8,  from: 2, to: 4 },
-      { id: 9,  from: 3, to: 4 },
-      { id: 10, from: 3, to: 5 },
-      { id: 11, from: 4, to: 5 },
+      { id: 0,  from: 4, to: 5 },
+      { id: 1,  from: 5, to: 6 },
+      { id: 2,  from: 6, to: 1 },
+      { id: 3,  from: 0, to: 6 },
+      { id: 4,  from: 6, to: 7 },
+      { id: 5,  from: 7, to: 2 },
+      { id: 6,  from: 2, to: 8 },
+      { id: 7,  from: 8, to: 9 },
+      { id: 8,  from: 9, to: 4 },
+      { id: 9,  from: 1, to: 7 },
+      { id: 10, from: 7, to: 8 },
+      { id: 11, from: 8, to: 3 },
+      { id: 12, from: 3, to: 9 },
+      { id: 13, from: 9, to: 5 },
+      { id: 14, from: 5, to: 0 },
     ],
   },
 ];
@@ -539,6 +671,10 @@ function checkTerminalState() {
       gameState = 'SUCCESS';
       setMessage(`ALL CLEAR! 5단계 완성 - ${elapsed.toFixed(2)}초`, 'clear');
       playSound('clear');
+      setTimeout(() => {
+        document.getElementById('success-time').textContent = `완성 시간: ${elapsed.toFixed(2)}초`;
+        document.getElementById('success-overlay').classList.remove('hidden');
+      }, 900);
     } else {
       gameState = 'STAGE_CLEAR';
       setMessage(`${currentLevelIndex + 1}단계 CLEAR! 다음 낙서로 넘어갑니다.`, 'clear');
@@ -858,6 +994,35 @@ resize();
 window.addEventListener('resize', resize);
 resetGame(false);
 updateTimer();
+
+// ── 명예의 전당 기록 ──────────────────────────────────────────────────────
+document.getElementById('btn-record').addEventListener('click', () => {
+  document.getElementById('record-form').style.display = 'block';
+  document.getElementById('name-input').focus();
+  document.getElementById('btn-record').style.display = 'none';
+});
+document.getElementById('btn-record-confirm').addEventListener('click', submitHallOfFameScore);
+document.getElementById('name-input').addEventListener('keydown', e => {
+  if (e.key === 'Enter') submitHallOfFameScore();
+});
+function submitHallOfFameScore() {
+  const nameEl = document.getElementById('name-input');
+  const name = nameEl.value.trim() || '익명';
+  const score = Math.round(elapsed * 1000);
+  window.parent.postMessage({ type: 'submitScore', game: 'one-line', name, score }, '*');
+  document.getElementById('record-form').style.display = 'none';
+  document.getElementById('record-done').style.display = 'block';
+}
+document.getElementById('btn-success-restart').addEventListener('click', () => {
+  document.getElementById('success-overlay').classList.add('hidden');
+  document.getElementById('btn-record').style.display = 'block';
+  document.getElementById('record-form').style.display = 'none';
+  document.getElementById('record-done').style.display = 'none';
+  resetGame();
+});
+document.getElementById('btn-success-home').addEventListener('click', () => {
+  window.parent.postMessage({ type: 'closeGame' }, '*');
+});
 </script>
 </body>
 </html>
